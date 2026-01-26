@@ -1,0 +1,65 @@
+MICHAEL RODRIGUEZ
+michael.rodriguez@email.com | (650) 555-7890
+San Jose, CA
+
+SUMMARY
+Software developer with 3 years of experience in Python backend development. Looking to transition into machine learning engineering. Strong foundation in Django and REST APIs.
+
+SKILLS
+- Python, JavaScript, HTML, CSS
+- Django, Flask, FastAPI
+- PostgreSQL, MySQL
+- Docker, Git
+- AWS (EC2, S3)
+- Basic knowledge of machine learning with scikit-learn
+
+EXPERIENCE
+
+Backend Developer
+StartupXYZ | San Jose, CA | March 2021 - Present
+- Developed REST APIs using Django and Django Rest Framework
+- Built user authentication and authorization systems
+- Optimized database queries improving response time by 30%
+- Deployed applications to AWS EC2 using Docker
+- Wrote unit tests using pytest
+
+Junior Software Developer
+TechSmall Inc | San Jose, CA | June 2019 - February 2021
+- Created web applications using Django and React
+- Maintained PostgreSQL databases
+- Fixed bugs and implemented new features
+- Participated in code reviews
+
+Software Development Intern
+LocalCompany | San Jose, CA | Summer 2018
+- Developed internal tools using Python
+- Learned Git and version control
+- Wrote documentation
+
+EDUCATION
+
+Bachelor of Science in Computer Science
+San Jose State University | 2015 - 2019
+GPA: 3.4/4.0
+
+ONLINE COURSES
+- Andrew Ng's Machine Learning Course (Coursera) - 2022
+- Deep Learning Specialization (Coursera) - In Progress
+- AWS Cloud Practitioner Training
+
+PROJECTS
+
+Personal Blog Platform
+- Built using Django and PostgreSQL
+- Deployed on Heroku
+- User authentication and commenting system
+
+Weather API
+- REST API using FastAPI
+- Fetches data from external weather services
+- Dockerized application
+
+INTERESTS
+- Learning about machine learning and AI
+- Contributing to open source projects
+- Playing basketball
