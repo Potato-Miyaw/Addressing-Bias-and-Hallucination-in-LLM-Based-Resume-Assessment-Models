@@ -38,37 +38,73 @@ class JDExtractor:
     def _comprehensive_extraction(self, jd_text: str) -> Dict[str, Any]:
         """Comprehensive regex-based extraction optimized for JDs"""
         
-        # Skills - comprehensive patterns covering multiple domains
+        # Skills - COMPREHENSIVE patterns covering ALL domains
         skill_patterns = [
             # Programming Languages
-            r'\b(Python|Java|JavaScript|TypeScript|C\+\+|C#|Ruby|Go|Rust|Swift|Kotlin|PHP|R|MATLAB|Scala|Perl|Haskell)\b',
+            r'\b(Python|Java|JavaScript|TypeScript|C\+\+|C#|Ruby|Go|Rust|Swift|Kotlin|PHP|R|MATLAB|Scala|Perl|Haskell|Groovy|Dart)\b',
             
-            # Web Frameworks
-            r'\b(React|Angular|Vue|Svelte|Django|Flask|FastAPI|Spring|Express|Node\.?js|Laravel|Rails|ASP\.NET|Next\.js)\b',
+            # Web Frameworks & Libraries
+            r'\b(React|Angular|Vue|Svelte|Django|Flask|FastAPI|Spring|Express|Node\.?js|Laravel|Rails|ASP\.NET|Next\.js|Ember|Backbone)\b',
             
-            # Cloud & DevOps
-            r'\b(Docker|Kubernetes|AWS|Azure|GCP|Google\s*Cloud|Git|Jenkins|CI/CD|Terraform|Ansible|Chef|Puppet)\b',
+            # Cloud & AWS Services
+            r'\b(AWS|Azure|GCP|Google\s*Cloud|EC2|S3|Lambda|RDS|DynamoDB|SageMaker|CloudFormation|IAM|VPC|ECS|EKS)\b',
+            
+            # DevOps & Deployment
+            r'\b(Docker|Kubernetes|Jenkins|GitLab|GitHub\s*Actions|Terraform|Ansible|Chef|Puppet|Prometheus|Grafana|ELK\s*Stack)\b',
             
             # Databases
-            r'\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Cassandra|Oracle|DynamoDB|SQLite|Neo4j)\b',
+            r'\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Cassandra|Oracle|DynamoDB|SQLite|Neo4j|MariaDB|Snowflake|Hive)\b',
             
-            # ML/AI
-            r'\b(Machine\s*Learning|Deep\s*Learning|NLP|Computer\s*Vision|TensorFlow|PyTorch|Scikit-learn|Keras|XGBoost)\b',
+            # ML/AI/NLP
+            r'\b(Machine\s*Learning|Deep\s*Learning|NLP|Computer\s*Vision|TensorFlow|PyTorch|Scikit-learn|Keras|XGBoost|BERT|GPT|Transformers|Hugging\s*Face|LightGBM)\b',
+            
+            # BI & Data Visualization (CRITICAL - ADDED)
+            r'\b(Power\s*BI|Tableau|Looker|Qlik|Microstrategy|SAP\s*Analytics|Google\s*Data\s*Studio|Excel|matplotlib|plotly|seaborn|ggplot2)\b',
+            
+            # Data & Analytics Tools
+            r'\b(Spark|Hadoop|Kafka|Airflow|Pandas|NumPy|SPSS|SAS|Stata|Alteryx|Informatica|Dask|PySpark)\b',
             
             # Web & API
-            r'\b(HTML|CSS|REST|RESTful|GraphQL|Microservices|API)\b',
+            r'\b(HTML|CSS|REST|RESTful|GraphQL|Microservices|API|gRPC|SOAP|WebSocket)\b',
             
-            # Methodologies
-            r'\b(Agile|Scrum|Kanban|DevOps|TDD|BDD)\b',
+            # Testing Frameworks
+            r'\b(pytest|Jest|Selenium|Cypress|Mocha|Jasmine|JUnit|TestNG|Cucumber|Mockito|RSpec)\b',
             
-            # Tools
-            r'\b(Jira|Confluence|VS\s*Code|IntelliJ|Eclipse|Postman|Swagger)\b'
+            # Version Control & Collaboration
+            r'\b(Git|GitHub|GitLab|Bitbucket|SVN|Jira|Confluence|Trello|Asana|Monday|Slack)\b',
+            
+            # Office & Productivity
+            r'\b(Excel|Word|PowerPoint|Outlook|Access|Google\s*Sheets|Google\s*Docs|Google\s*Slides|SharePoint|OneNote)\b',
+            
+            # IDEs & Development Tools
+            r'\b(VS\s*Code|Visual\s*Studio|IntelliJ|PyCharm|Eclipse|Sublime|Jupyter|RStudio|Anaconda|Postman)\b',
+            
+            # Methodologies & Practices
+            r'\b(Agile|Scrum|Kanban|Waterfall|Lean|CI/CD|DevOps|TDD|BDD|Microservices|OOP|SOLID)\b',
+            
+            # Mobile Development
+            r'\b(React\s*Native|Flutter|Swift|Kotlin|Objective-C|Xamarin|Ionic|Android|iOS)\b',
+            
+            # Statistical & ML Ops Tools
+            r'\b(MLOps|MLflow|Kubeflow|DVC|Weights\s*&\s*Biases|Neptune|Comet|Databricks)\b',
+            
+            # Cloud Storage & CDN
+            r'\b(Google\s*Cloud\s*Storage|Azure\s*Blob|Dropbox|OneDrive|Box|CloudFront|CloudFlare)\b',
+            
+            # Communication Tools
+            r'\b(Slack|Teams|Discord|Zoom|Skype)\b',
+            
+            # Database Management Tools
+            r'\b(DBeaver|Navicat|Workbench|pgAdmin|MongoDB\s*Compass|Redis\s*Commander)\b',
+            
+            # Other Important Tools
+            r'\b(Postman|Insomnia|SoapUI|Git\s*Bash|PowerShell|Bash|Linux|Unix|Windows)\b'
         ]
         
         skills = set()
         for pattern in skill_patterns:
             matches = re.findall(pattern, jd_text, re.IGNORECASE)
-            skills.update([m.strip() for m in matches])
+            skills.update([m.strip() for m in matches if m])
         
         # Experience - multiple patterns
         experience = 0

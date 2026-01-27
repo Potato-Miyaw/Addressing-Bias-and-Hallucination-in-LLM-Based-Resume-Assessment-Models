@@ -36,6 +36,16 @@ class FairnessAwareRanker:
         10. tfidf_similarity (using match score as proxy)
         """
         
+        # Ensure all inputs are dicts
+        if not isinstance(match_data, dict):
+            match_data = {"match_score": 0, "skill_match": 0}
+        
+        if not isinstance(resume_data, dict):
+            resume_data = {}
+            
+        if not isinstance(jd_data, dict):
+            jd_data = {"required_skills": []}
+        
         # Education level mapping
         edu_mapping = {
             "high school": 1,
@@ -45,27 +55,52 @@ class FairnessAwareRanker:
             "phd": 4
         }
         
-        # Extract resume data
-        skills = resume_data.get("skills", [])
+        # Extract resume data - handle both field name variants
+        # Primary skills from BERT NER format
+        skills = resume_data.get("primary_skills", resume_data.get("skills", []))
         education = resume_data.get("education", [])
-        certifications = resume_data.get("certifications", [])
-        experience = resume_data.get("experience", {})
+        
+        # Handle certifications - check if it exists and is a dict
+        sec_exp = resume_data.get("relevant_experience_(secondary)", {})
+        if isinstance(sec_exp, dict):
+            certifications = sec_exp.get("certifications", [])
+        else:
+            certifications = []
+        
+        # Experience in months from BERT NER
+        exp_months = resume_data.get("total_experience_(months)", 0)
+        if not isinstance(exp_months, (int, float)):
+            exp_months = 0
+        
+        # Ensure lists are actually lists
+        if not isinstance(skills, list):
+            skills = []
+        if not isinstance(education, list):
+            education = []
+        if not isinstance(certifications, list):
+            certifications = []
         
         # Education level
         edu_level = 1
         if education:
-            edu_str = education[0].get("degree", "").lower()
+            edu_item = education[0]
+            edu_str = edu_item.get("degree", "") if isinstance(edu_item, dict) else str(edu_item)
+            edu_str = edu_str.lower()
             for key, val in edu_mapping.items():
                 if key in edu_str:
                     edu_level = val
                     break
         
-        # Experience years
-        exp_years = experience.get("years", 0)
+        # Experience years from months
+        exp_years = exp_months / 12 if exp_months > 0 else 0
         
-        # Match scores
-        skills_match = match_data.get("skill_match", 0) / 100.0
-        overall_match = match_data.get("match_score", 0) / 100.0
+        # Match scores with safe defaults
+        try:
+            skill_match = (match_data.get("skill_match", 0) or 0) / 100.0
+            overall_match = (match_data.get("match_score", 0) or 0) / 100.0
+        except (TypeError, ZeroDivisionError):
+            skill_match = 0.0
+            overall_match = 0.0
         
         features = {
             "skills_count": len(skills),
@@ -169,38 +204,60 @@ class FairnessAwareRanker:
         if not candidates_data:
             return []
         
-        # Engineer features for all candidates
-        X = []
-        for candidate in candidates_data:
-            features = self.engineer_features(
-                candidate['resume_data'],
-                jd_data,
-                candidate['match_data']
-            )
-            X.append(list(features.values()))
-        
-        X = np.array(X)
-        
-        # Get predictions
-        if self.baseline_model or self.fairness_model:
-            probs = self.predict_proba(X, use_fairness=use_fairness)
-            scores = probs[:, 1]  # Probability of being qualified
-        else:
-            # No model trained - use match scores
-            scores = np.array([c['match_data']['match_score'] / 100.0 for c in candidates_data])
-        
-        # Add scores and rank
-        for i, candidate in enumerate(candidates_data):
-            candidate['ranking_score'] = float(scores[i])
-        
-        # Sort by score (descending)
-        ranked = sorted(candidates_data, key=lambda x: x['ranking_score'], reverse=True)
-        
-        # Add ranks
-        for rank, candidate in enumerate(ranked, 1):
-            candidate['rank'] = rank
-        
-        return ranked
+        try:
+            # Engineer features for all candidates
+            X = []
+            valid_candidates = []
+            
+            for candidate in candidates_data:
+                try:
+                    features = self.engineer_features(
+                        candidate.get('resume_data', {}),
+                        jd_data,
+                        candidate.get('match_data', {})
+                    )
+                    X.append(list(features.values()))
+                    valid_candidates.append(candidate)
+                except Exception as e:
+                    print(f"Warning: Could not engineer features for candidate: {e}")
+                    continue
+            
+            if not valid_candidates:
+                # If no valid candidates, return original with default scores
+                for i, candidate in enumerate(candidates_data):
+                    candidate['ranking_score'] = 0.0
+                    candidate['rank'] = i + 1
+                return candidates_data
+            
+            X = np.array(X)
+            
+            # Get predictions
+            if self.baseline_model or self.fairness_model:
+                probs = self.predict_proba(X, use_fairness=use_fairness)
+                scores = probs[:, 1]  # Probability of being qualified
+            else:
+                # No model trained - use match scores
+                scores = np.array([c.get('match_data', {}).get('match_score', 0) / 100.0 for c in valid_candidates])
+            
+            # Add scores and rank
+            for i, candidate in enumerate(valid_candidates):
+                candidate['ranking_score'] = float(scores[i])
+            
+            # Sort by score (descending)
+            ranked = sorted(valid_candidates, key=lambda x: x['ranking_score'], reverse=True)
+            
+            # Add ranks
+            for rank, candidate in enumerate(ranked, 1):
+                candidate['rank'] = rank
+            
+            return ranked
+        except Exception as e:
+            print(f"Error in rank_candidates: {e}")
+            # Return candidates with default ranking
+            for i, candidate in enumerate(candidates_data):
+                candidate['ranking_score'] = 0.0
+                candidate['rank'] = i + 1
+            return candidates_data
     
     def save_models(self):
         """Save trained models"""
