@@ -190,13 +190,13 @@ Requirements:
 with tab2:
     st.header("📋 Resume Parsing")
     
-    st.markdown("Upload resumes (TXT format) to extract structured information using BERT NER")
+    st.markdown("Upload resumes (PDF, DOCX, DOC, TXT) to extract structured information")
     
     uploaded_files = st.file_uploader(
         "Upload Resume Files",
-        type=['txt'],
+        type=['txt', 'pdf', 'docx', 'doc'],
         accept_multiple_files=True,
-        help="Upload one or more resume files in TXT format"
+        help="Upload one or more resume files in TXT, PDF, DOCX, or DOC format"
     )
     
     if uploaded_files:
@@ -210,14 +210,15 @@ with tab2:
                 status_text.text(f"Parsing {uploaded_file.name}...")
                 
                 try:
-                    resume_text = uploaded_file.read().decode('utf-8')
+                    # Reset file pointer to beginning
+                    uploaded_file.seek(0)
                     
+                    # Send file to upload endpoint (supports PDF, DOCX, DOC, TXT)
+                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
                     response = requests.post(
-                        f"{API_BASE_URL}/api/resume/parse",
-                        json={
-                            "resume_text": resume_text,
-                            "candidate_name": uploaded_file.name.replace('.txt', '')
-                        }
+                        f"{API_BASE_URL}/api/resume/upload",
+                        files=files,
+                        params={"save_to_db": True}
                     )
                     
                     if response.status_code == 200:
@@ -226,6 +227,8 @@ with tab2:
                             "filename": uploaded_file.name,
                             "data": resume_data
                         })
+                    else:
+                        st.error(f"API Error: {response.json().get('detail', 'Unknown error')}")
                     
                     progress_bar.progress((idx + 1) / len(uploaded_files))
                     
