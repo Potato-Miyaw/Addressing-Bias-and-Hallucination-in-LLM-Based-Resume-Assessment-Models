@@ -39,10 +39,14 @@ class MatchRequest(BaseModel):
     job_id: str
     resume_data: Dict[str, Any]
     jd_data: Dict[str, Any]
+    save_to_db: bool = True
 
 @router.post("/")
 async def match_resume_to_job(request: MatchRequest):
-    """Match a resume to a job description"""
+    """
+    Match a resume to a job description
+    Runs full NER extraction if resume only has basic info
+    """
     try:
         matcher = get_job_matcher()
         extractor = get_ner_extractor()
@@ -59,29 +63,17 @@ async def match_resume_to_job(request: MatchRequest):
         if needs_extraction:
             print(f"Running NER extraction for resume {request.resume_id}")
             resume_data = extractor.parse_resume(resume_data['text'])
-            
-            # 🔍 DEBUG: Print extracted skills
-            print(f"DEBUG - Resume {request.resume_id}:")
-            print(f"  Primary skills: {resume_data.get('primary_skills', [])}")
-            print(f"  Secondary skills: {resume_data.get('secondary_skills', [])}")
-            print(f"  Education: {resume_data.get('education', [])}")
-            print(f"  Experience: {resume_data.get('total_experience_(months)', 0)} months")
-        
-        # 🔍 DEBUG: Print JD skills
-        print(f"DEBUG - JD skills: {request.jd_data.get('required_skills', [])}")
         
         # Now match
         match_result = matcher.match_resume_to_job(resume_data, request.jd_data)
-        
-        # 🔍 DEBUG: Print match result
-        print(f"DEBUG - Match result: {match_result}")
         
         return {
             "success": True,
             "resume_id": request.resume_id,
             "job_id": request.job_id,
             "match_result": match_result,
-            "ner_extracted": needs_extraction
+            "ner_extracted": needs_extraction,
+            "saved_to_db": False
         }
     except Exception as e:
         import traceback
@@ -95,7 +87,8 @@ async def match_resume_to_job(request: MatchRequest):
 async def batch_match_resumes(
     job_id: str,
     jd_data: Dict[str, Any],
-    resumes: List[Dict[str, Any]]
+    resumes: List[Dict[str, Any]],
+    save_to_db: bool = True
 ):
     """Match multiple resumes to a single job"""
     matcher = get_job_matcher()
@@ -128,5 +121,6 @@ async def batch_match_resumes(
         "job_id": job_id,
         "total_resumes": len(resumes),
         "successful_matches": len([r for r in results if r["status"] == "SUCCESS"]),
-        "results": results
+        "results": results,
+        "saved_to_db": False
     }
