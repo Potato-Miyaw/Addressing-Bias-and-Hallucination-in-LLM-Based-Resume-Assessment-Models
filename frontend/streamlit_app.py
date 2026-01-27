@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from typing import Dict, Any, List
 import sys
+import random
 import os
 
 # Add project root to path
@@ -68,10 +69,14 @@ if 'resumes_data' not in st.session_state:
     st.session_state.resumes_data = []
 if 'pipeline_results' not in st.session_state:
     st.session_state.pipeline_results = None
+if 'fairness_metrics' not in st.session_state:
+    st.session_state.fairness_metrics = None
+if 'audit_zip' not in st.session_state:
+    st.session_state.audit_zip = None
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", use_container_width=True)
+    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", use_column_width=True)
     st.markdown("### 💼 LLM Hiring System")
     st.markdown("**Features:**")
     st.markdown("- 📄 Job Description Analysis")
@@ -314,7 +319,7 @@ with tab3:
                                 "resume_id": resume_data['resume_id'],
                                 "resume_data": resume_data,
                                 "match_data": match_result,
-                                "demographics": {"gender": 1, "race_gender": "Unknown"}
+                                "demographics": {"gender": random.choice([0, 1]), "race_gender": "Unknown"}
                             })
                     
                     # Rank candidates
@@ -331,6 +336,8 @@ with tab3:
                     if rank_response.status_code == 200:
                         ranked_results = rank_response.json()
                         st.session_state.ranked_candidates = ranked_results['ranked_candidates']
+                        st.session_state.fairness_metrics = ranked_results.get('fairness_metrics')
+                        st.session_state.audit_zip = None
                         st.success("✅ Candidates ranked successfully!")
                         st.rerun()
                     
@@ -356,7 +363,7 @@ with tab3:
                 })
             
             df = pd.DataFrame(ranking_data)
-            st.dataframe(df, width='stretch', hide_index=True)
+            st.dataframe(df, hide_index=True)
             
             # Visualization
             st.subheader("📈 Candidate Comparison")
@@ -388,7 +395,52 @@ with tab3:
                 height=400
             )
             
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig)
+
+            # Fairness metrics
+            if st.session_state.fairness_metrics:
+                st.subheader("Fairness Metrics")
+                fm = st.session_state.fairness_metrics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Impact Ratio", fm.get("impact_ratio", "N/A"))
+                with col2:
+                    st.metric("DP Difference", fm.get("demographic_parity", "N/A"))
+                with col3:
+                    st.metric("EO Difference", fm.get("equal_opportunity", "N/A"))
+                if fm.get("selection_rates"):
+                    st.caption(f"Selection Rates: {fm.get('selection_rates')}")
+                if fm.get("note"):
+                    st.info(fm.get("note"))
+
+            # Audit report export
+            st.subheader("Export Audit Report")
+            if st.button("Generate Audit Report (PDF + CSV)", type="secondary"):
+                try:
+                    audit_resp = requests.post(
+                        f"{API_BASE_URL}/api/audit/export",
+                        json={
+                            "job_id": st.session_state.jd_data["job_id"],
+                            "ranked_candidates": st.session_state.ranked_candidates,
+                            "fairness_metrics": st.session_state.fairness_metrics or {},
+                            "fairness_mode": "ON" if use_fairness else "OFF"
+                        }
+                    )
+                    if audit_resp.status_code == 200:
+                        st.session_state.audit_zip = audit_resp.content
+                        st.success("Audit report ready for download.")
+                    else:
+                        st.error(f"Audit export failed: {audit_resp.text}")
+                except Exception as e:
+                    st.error(f"Audit export error: {str(e)}")
+
+            if st.session_state.audit_zip:
+                st.download_button(
+                    "Download Audit Report Zip",
+                    data=st.session_state.audit_zip,
+                    file_name=f"{st.session_state.jd_data['job_id']}_audit_bundle.zip",
+                    mime="application/zip"
+                )
             
             # Detailed view
             st.subheader("📋 Detailed Candidate Reports")
@@ -539,6 +591,7 @@ Resume 2: Bob Jones. 3 years Python experience..."""
                     try:
                         # Split resumes
                         resume_texts = [r.strip() for r in pipeline_resumes.split('\n\n') if r.strip()]
+                        st.session_state.audit_zip = None
                         
                         response = requests.post(
                             f"{API_BASE_URL}/api/pipeline/complete",
@@ -569,6 +622,50 @@ Resume 2: Bob Jones. 3 years Python experience..."""
         st.subheader("📊 Pipeline Results")
         
         st.metric("Total Candidates Processed", results['total_candidates'])
+
+        if results.get("fairness_metrics"):
+            st.subheader("Fairness Metrics")
+            fm = results["fairness_metrics"]
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Impact Ratio", fm.get("impact_ratio", "N/A"))
+            with col2:
+                st.metric("DP Difference", fm.get("demographic_parity", "N/A"))
+            with col3:
+                st.metric("EO Difference", fm.get("equal_opportunity", "N/A"))
+            if fm.get("selection_rates"):
+                st.caption(f"Selection Rates: {fm.get('selection_rates')}")
+            if fm.get("note"):
+                st.info(fm.get("note"))
+
+        st.subheader("Export Audit Report")
+        if st.button("Generate Audit Report (PDF + CSV)"):
+            try:
+                st.session_state.audit_zip = None
+                audit_resp = requests.post(
+                    f"{API_BASE_URL}/api/audit/export",
+                    json={
+                        "job_id": results["job_id"],
+                        "ranked_candidates": results["ranked_candidates"],
+                        "fairness_metrics": results.get("fairness_metrics") or {},
+                        "fairness_mode": "ON" if results.get("fairness_enabled") else "OFF"
+                    }
+                )
+                if audit_resp.status_code == 200:
+                    st.session_state.audit_zip = audit_resp.content
+                    st.success("Audit report ready for download.")
+                else:
+                    st.error(f"Audit export failed: {audit_resp.text}")
+            except Exception as e:
+                st.error(f"Audit export error: {str(e)}")
+
+        if st.session_state.audit_zip:
+            st.download_button(
+                "Download Audit Report Zip",
+                data=st.session_state.audit_zip,
+                file_name=f"{results['job_id']}_audit_bundle.zip",
+                mime="application/zip"
+            )
         
         # Show top 3 candidates
         st.subheader("🏆 Top Candidates")

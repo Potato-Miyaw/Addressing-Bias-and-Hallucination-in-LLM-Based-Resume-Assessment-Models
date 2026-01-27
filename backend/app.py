@@ -14,7 +14,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import routers
-from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router
+from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router, audit_router
 
 # Initialize FastAPI
 app = FastAPI(
@@ -39,6 +39,7 @@ app.include_router(verification_router.router)
 app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
+app.include_router(audit_router.router)
 
 # Health check
 @app.get("/")

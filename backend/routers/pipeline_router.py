@@ -48,6 +48,7 @@ async def complete_pipeline(request: CompletePipelineRequest):
         
         # Step 1: Extract JD
         jd_data = extractor.extract_jd_data(request.jd_text)
+        jd_data["jd_text"] = request.jd_text
         
         import hashlib
         job_id = hashlib.md5(request.jd_text.encode()).hexdigest()[:12]
@@ -76,10 +77,11 @@ async def complete_pipeline(request: CompletePipelineRequest):
             })
         
         # Step 5: Rank candidates
-        ranked = ranker.rank_candidates(
+        rank_result = ranker.rank_candidates_with_metrics(
             candidates,
             jd_data,
-            use_fairness=request.use_fairness
+            use_fairness=request.use_fairness,
+            sensitive_attribute="gender"
         )
         
         return {
@@ -87,7 +89,8 @@ async def complete_pipeline(request: CompletePipelineRequest):
             "job_id": job_id,
             "jd_data": jd_data,
             "total_candidates": len(request.resume_texts),
-            "ranked_candidates": ranked,
+            "ranked_candidates": rank_result["ranked_candidates"],
+            "fairness_metrics": rank_result["fairness_metrics"],
             "fairness_enabled": request.use_fairness
         }
     except Exception as e:

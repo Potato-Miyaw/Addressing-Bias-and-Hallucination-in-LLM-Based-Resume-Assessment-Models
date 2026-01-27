@@ -74,7 +74,6 @@ async def match_resume_to_job(request: MatchRequest):
         
         # Now match
         match_result = matcher.match_resume_to_job(resume_data, request.jd_data)
-        
         return {
             "success": True,
             "resume_id": request.resume_id,

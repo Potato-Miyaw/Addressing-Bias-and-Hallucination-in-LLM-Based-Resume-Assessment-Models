@@ -50,3 +50,5 @@ class RankRequest(BaseModel):
     candidates: List[Dict[str, Any]]
     jd_data: Dict[str, Any]
     use_fairness: bool = True
+    sensitive_attribute: Optional[str] = "gender"
+    hire_threshold: Optional[float] = 0.5

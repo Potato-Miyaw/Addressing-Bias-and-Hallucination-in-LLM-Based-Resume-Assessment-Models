@@ -4,7 +4,7 @@ Fairness-Aware Ranking Router
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
 import os
 
@@ -31,6 +31,8 @@ class RankRequest(BaseModel):
     candidates: List[Dict[str, Any]]
     jd_data: Dict[str, Any]
     use_fairness: bool = True
+    sensitive_attribute: Optional[str] = "gender"
+    hire_threshold: Optional[float] = 0.5
     save_to_db: bool = True
 
 @router.post("/")
@@ -38,19 +40,25 @@ async def rank_candidates(request: RankRequest):
     """Rank candidates using XGBoost + Fairlearn"""
     try:
         ranker_service = get_ranker()
-        
-        ranked_candidates = ranker_service.rank_candidates(
+
+        result = ranker_service.rank_candidates_with_metrics(
             request.candidates,
             request.jd_data,
-            use_fairness=request.use_fairness
+            use_fairness=request.use_fairness,
+            sensitive_attribute=request.sensitive_attribute or "gender",
+            hire_threshold=request.hire_threshold if request.hire_threshold is not None else 0.5
         )
-        
+
+        ranked_candidates = result["ranked_candidates"]
+        fairness_metrics = result["fairness_metrics"]
+
         return {
             "success": True,
             "job_id": request.job_id,
             "total_candidates": len(request.candidates),
             "fairness_enabled": request.use_fairness,
             "ranked_candidates": ranked_candidates,
+            "fairness_metrics": fairness_metrics,
             "saved_to_db": False
         }
     except Exception as e:
