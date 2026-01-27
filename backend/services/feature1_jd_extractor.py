@@ -1,101 +1,68 @@
 """
-Feature 1: Job Description Extraction using TinyLlama (non-gated alternative to Gemma)
+Feature 1: Job Description Extraction using BERT NER
 Extracts: skills, experience, education, certifications from JD text
+Uses same NER approach as resume parsing for consistency
 """
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import pipeline
 import torch
-import json
 import re
-from typing import Dict, Any
+from typing import Dict, Any, List
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class JDExtractor:
-    def __init__(self, model_name: str = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"):
-        """Initialize TinyLlama for JD extraction (non-gated, free to use)"""
+    def __init__(self):
+        """Initialize BERT NER for JD extraction"""
         try:
-            print(f"Loading {model_name}...")
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto",
-                low_cpu_mem_usage=True
+            logger.info("Loading BERT NER model for JD extraction...")
+            self.ner_pipeline = pipeline(
+                "ner",
+                model="dslim/bert-base-NER",
+                aggregation_strategy="simple",
+                device=-1
             )
-            self.use_llm = True
-            print("Model loaded successfully")
+            logger.info("BERT NER model loaded successfully")
         except Exception as e:
-            print(f"Failed to load LLM: {e}")
-            print("Falling back to regex-based extraction")
-            self.use_llm = False
+            logger.warning(f"Failed to load BERT NER: {e}")
+            self.ner_pipeline = None
     
     def extract_jd_data(self, jd_text: str) -> Dict[str, Any]:
-        """Extract structured data from job description"""
+        """Extract structured data from job description using BERT NER + regex"""
         
-        if not self.use_llm:
-            return self._fallback_extraction(jd_text)
-        
-        # Simpler, more direct prompt
-        prompt = f"""Extract job requirements from this description. Return ONLY a JSON object, no other text.
-
-    Job Description:
-    {jd_text}
-
-    Return this exact format:
-    {{"required_skills": ["Python", "AWS"], "required_experience": 5, "required_education": "Bachelor's", "certifications": ["AWS Certified"]}}
-
-    JSON:"""
-
-        try:
-            inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
-            
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=200,
-                    temperature=0.1,
-                    do_sample=False,  # Greedy decoding for consistency
-                    pad_token_id=self.tokenizer.eos_token_id
-                )
-            
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Extract ONLY the JSON part (after "JSON:")
-            if "JSON:" in response:
-                json_part = response.split("JSON:")[-1].strip()
-            else:
-                json_part = response
-            
-            # Find first { and last }
-            start = json_part.find('{')
-            end = json_part.rfind('}') + 1
-            
-            if start != -1 and end > start:
-                json_str = json_part[start:end]
-                data = json.loads(json_str)
-                return {
-                    "required_skills": data.get("required_skills", []),
-                    "required_experience": data.get("required_experience", 0),
-                    "required_education": data.get("required_education", ""),
-                    "certifications": data.get("certifications", []),
-                    "status": "SUCCESS"
-                }
-        except Exception as e:
-            print(f"LLM extraction failed: {e}")
-        
-        # Always fallback if LLM fails
-        return self._fallback_extraction(jd_text)
+        # Always use comprehensive regex extraction (more reliable for JDs)
+        return self._comprehensive_extraction(jd_text)
     
-    def _fallback_extraction(self, jd_text: str) -> Dict[str, Any]:
-        """Regex-based fallback extraction (always works)"""
+    def _comprehensive_extraction(self, jd_text: str) -> Dict[str, Any]:
+        """Comprehensive regex-based extraction optimized for JDs"""
         
-        # Skills - expanded patterns
+        # Skills - comprehensive patterns covering multiple domains
         skill_patterns = [
-            r'\b(Python|Java|JavaScript|TypeScript|C\+\+|C#|Ruby|Go|Rust|Swift|Kotlin|PHP|R|MATLAB|Scala)\b',
-            r'\b(React|Angular|Vue|Django|Flask|FastAPI|Spring|Node\.js|Express|Laravel)\b',
-            r'\b(Docker|Kubernetes|AWS|Azure|GCP|Git|Jenkins|CI/CD|Terraform|Ansible)\b',
-            r'\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Cassandra|Oracle|DynamoDB)\b',
-            r'\b(Machine Learning|Deep Learning|NLP|Computer Vision|TensorFlow|PyTorch|Scikit-learn|Keras)\b',
-            r'\b(HTML|CSS|REST|GraphQL|Microservices|Agile|Scrum|DevOps)\b'
+            # Programming Languages
+            r'\b(Python|Java|JavaScript|TypeScript|C\+\+|C#|Ruby|Go|Rust|Swift|Kotlin|PHP|R|MATLAB|Scala|Perl|Haskell)\b',
+            
+            # Web Frameworks
+            r'\b(React|Angular|Vue|Svelte|Django|Flask|FastAPI|Spring|Express|Node\.?js|Laravel|Rails|ASP\.NET|Next\.js)\b',
+            
+            # Cloud & DevOps
+            r'\b(Docker|Kubernetes|AWS|Azure|GCP|Google\s*Cloud|Git|Jenkins|CI/CD|Terraform|Ansible|Chef|Puppet)\b',
+            
+            # Databases
+            r'\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Cassandra|Oracle|DynamoDB|SQLite|Neo4j)\b',
+            
+            # ML/AI
+            r'\b(Machine\s*Learning|Deep\s*Learning|NLP|Computer\s*Vision|TensorFlow|PyTorch|Scikit-learn|Keras|XGBoost)\b',
+            
+            # Web & API
+            r'\b(HTML|CSS|REST|RESTful|GraphQL|Microservices|API)\b',
+            
+            # Methodologies
+            r'\b(Agile|Scrum|Kanban|DevOps|TDD|BDD)\b',
+            
+            # Tools
+            r'\b(Jira|Confluence|VS\s*Code|IntelliJ|Eclipse|Postman|Swagger)\b'
         ]
         
         skills = set()
@@ -103,37 +70,58 @@ class JDExtractor:
             matches = re.findall(pattern, jd_text, re.IGNORECASE)
             skills.update([m.strip() for m in matches])
         
-        # Experience
-        exp_match = re.search(r'(\d+)\+?\s*(?:to\s+\d+)?\s*years?', jd_text, re.IGNORECASE)
-        experience = int(exp_match.group(1)) if exp_match else 0
-        
-        # Education
-        education = "Bachelor's"
-        if re.search(r'Master|MS|MSc|M\.S|M\.Sc', jd_text, re.IGNORECASE):
-            education = "Master's"
-        elif re.search(r'PhD|Ph\.D|Doctorate', jd_text, re.IGNORECASE):
-            education = "PhD"
-        elif re.search(r'High School|Diploma', jd_text, re.IGNORECASE):
-            education = "High School"
-        
-        # Certifications
-        cert_patterns = [
-            r'(AWS Certified[\w\s]+)',
-            r'(Azure[\w\s]+Certified)',
-            r'(Google Cloud[\w\s]+Certified)',
-            r'\b(PMP|CISSP|CEH|CISA|CompTIA\s+\w+)\b',
-            r'(Certified[\w\s]+(?:Professional|Specialist|Expert|Developer|Administrator))'
+        # Experience - multiple patterns
+        experience = 0
+        exp_patterns = [
+            r'(\d+)\+?\s*(?:to\s+\d+)?\s*years?',
+            r'(\d+)\+?\s*yrs?',
+            r'minimum\s+of\s+(\d+)\s+years?',
+            r'at\s+least\s+(\d+)\s+years?',
         ]
         
-        certifications = []
+        for pattern in exp_patterns:
+            match = re.search(pattern, jd_text, re.IGNORECASE)
+            if match:
+                experience = int(match.group(1))
+                break
+        
+        # Education - hierarchical detection
+        education = "Bachelor's"
+        if re.search(r'PhD|Ph\.D|Doctorate|Doctoral', jd_text, re.IGNORECASE):
+            education = "PhD"
+        elif re.search(r'Master|MS|MSc|M\.S|M\.Sc|MBA|MEng', jd_text, re.IGNORECASE):
+            education = "Master's"
+        elif re.search(r'Bachelor|BS|BSc|B\.S|B\.Sc|BA|B\.A|BTech', jd_text, re.IGNORECASE):
+            education = "Bachelor's"
+        elif re.search(r'Associate|AA|AS', jd_text, re.IGNORECASE):
+            education = "Associate"
+        elif re.search(r'High\s*School|Diploma', jd_text, re.IGNORECASE):
+            education = "High School"
+        
+        # Certifications - comprehensive patterns
+        cert_patterns = [
+            r'(AWS\s+Certified[\w\s]+)',
+            r'(Azure[\w\s]+Certified[\w\s]*)',
+            r'(Google\s+Cloud[\w\s]+Certified[\w\s]*)',
+            r'\b(PMP|CISSP|CEH|CISA|CISM|CompTIA\s+\w+)\b',
+            r'(Certified[\w\s]+(?:Professional|Specialist|Expert|Developer|Administrator|Architect))',
+            r'(Oracle\s+Certified[\w\s]+)',
+            r'(Cisco\s+Certified[\w\s]+)',
+            r'\b(CCNA|CCNP|CCIE)\b',
+        ]
+        
+        certifications = set()
         for pattern in cert_patterns:
             matches = re.findall(pattern, jd_text, re.IGNORECASE)
-            certifications.extend([m.strip() if isinstance(m, str) else m[0].strip() for m in matches])
+            for match in matches:
+                cert = match.strip() if isinstance(match, str) else match[0].strip()
+                if len(cert) > 2:  # Avoid short false positives
+                    certifications.add(cert)
         
         return {
-            "required_skills": list(skills),
+            "required_skills": sorted(list(skills)),
             "required_experience": experience,
             "required_education": education,
-            "certifications": list(set(certifications)),
-            "status": "FALLBACK"
+            "certifications": sorted(list(certifications)),
+            "status": "SUCCESS"
         }
