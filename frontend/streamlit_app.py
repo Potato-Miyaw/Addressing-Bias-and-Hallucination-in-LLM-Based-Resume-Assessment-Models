@@ -252,12 +252,14 @@ with tab2:
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.metric("Resume ID", data.get('resume_id', 'N/A')[:8])
+                    resume_id = data.get('resume_id', 'N/A')
+                    st.metric("Resume ID", resume_id[:8] if resume_id else 'N/A')
                     st.metric("Name", data.get('name', 'Unknown'))
                 
                 with col2:
-                    st.metric("Email", data.get('email', 'N/A')[:20])
-                    st.metric("Phone", data.get('phone', 'N/A'))
+                    email = data.get('email', 'N/A') or 'N/A'
+                    st.metric("Email", email[:20] if email else 'N/A')
+                    st.metric("Phone", data.get('phone', 'N/A') or 'N/A')
                 
                 with col3:
                     st.metric("Status", data.get('status', 'UNKNOWN'))
@@ -427,6 +429,7 @@ with tab4:
         st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
     else:
         st.markdown("Verify resume claims for hallucinations using Token Overlap + BERTScore")
+        st.info("ℹ️ **NEW**: Ground truth is automatically extracted from the resume text itself - checking if LLM extractions actually appear in the original document!")
         
         selected_resume = st.selectbox(
             "Select Resume to Verify",
@@ -439,19 +442,24 @@ with tab4:
                 try:
                     resume_data = st.session_state.resumes_data[selected_resume]['data']
                     
-                    response = requests.post(
-                        f"{API_BASE_URL}/api/verify/resume",
-                        json={
-                            "resume_id": resume_data['resume_id'],
-                            "resume_extractions": resume_data
-                        }
-                    )
-                    
-                    if response.status_code == 200:
-                        verification = response.json()['verification_report']
-                        st.session_state.verification_report = verification
-                        st.rerun()
-                    
+                    # Make sure we have the full extracted data
+                    if 'text' not in resume_data:
+                        st.error("❌ Resume text not available. Please re-upload the resume.")
+                    else:
+                        response = requests.post(
+                            f"{API_BASE_URL}/api/verify/resume",
+                            json={
+                                "resume_id": resume_data['resume_id'],
+                                "resume_extractions": resume_data,
+                                "auto_extract_ground_truth": True  # Enable auto-extraction
+                            }
+                        )
+                        
+                        if response.status_code == 200:
+                            verification = response.json()['verification_report']
+                            st.session_state.verification_report = verification
+                            st.rerun()
+                
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
         
@@ -477,9 +485,18 @@ with tab4:
             if report['verdict'] == "VERIFIED":
                 st.success("✅ All claims verified!")
             elif report['verdict'] == "NO_CLAIMS":
-                st.info("ℹ️ No ground truth provided for verification")
+                st.info("ℹ️ Ground truth auto-extracted from resume text")
             else:
                 st.warning(f"⚠️ {report['verdict']}")
+            
+            # Show details if available
+            if report.get('details'):
+                with st.expander("📋 Detailed Verification Results"):
+                    for claim in report['details']:
+                        if claim['is_hallucination']:
+                            st.error(f"❌ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                        else:
+                            st.success(f"✅ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
 
 # ============================================
 # TAB 5: COMPLETE PIPELINE
