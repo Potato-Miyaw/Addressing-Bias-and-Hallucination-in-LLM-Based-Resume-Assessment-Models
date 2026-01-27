@@ -16,7 +16,7 @@ from backend.services.feature5_xgb_ranker import FairnessAwareRanker
 
 router = APIRouter(prefix="/api/rank", tags=["Ranking"])
 
-# Lazy load ranker
+# Lazy load services
 ranker = None
 
 def get_ranker():
@@ -31,6 +31,7 @@ class RankRequest(BaseModel):
     candidates: List[Dict[str, Any]]
     jd_data: Dict[str, Any]
     use_fairness: bool = True
+    save_to_db: bool = True
 
 @router.post("/")
 async def rank_candidates(request: RankRequest):
@@ -49,7 +50,8 @@ async def rank_candidates(request: RankRequest):
             "job_id": request.job_id,
             "total_candidates": len(request.candidates),
             "fairness_enabled": request.use_fairness,
-            "ranked_candidates": ranked_candidates
+            "ranked_candidates": ranked_candidates,
+            "saved_to_db": False
         }
     except Exception as e:
         raise HTTPException(

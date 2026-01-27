@@ -14,7 +14,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import routers
-from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router
+from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router
 
 # Initialize FastAPI
 app = FastAPI(
@@ -67,4 +67,8 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8000
+    )
