@@ -239,3 +239,157 @@ async def batch_parse_resumes(files: List[UploadFile] = File(...), save_to_db: b
         "failed": len([r for r in results if r["status"] == "FAILED"]),
         "results": results
     }
+
+
+# ============== NER VISUALIZATION ENDPOINTS ==============
+
+class NERVisualizationRequest(BaseModel):
+    resume_text: str
+    resume_data: Dict[str, Any]
+
+@router.post("/ner/visualize")
+async def visualize_ner_output(request: NERVisualizationRequest):
+    """
+    Get NER visualization data - entity table, highlighted text, and summary
+    
+    Returns:
+    - entity_table: Formatted table of extracted entities with categories
+    - entity_summary: Statistics about extracted entities
+    - highlighted_text: HTML with highlighted entities in original text
+    - extraction_status: Quality of extraction
+    """
+    try:
+        extractor = get_ner_extractor()
+        
+        # Get visualization data
+        viz_data = extractor.get_visualization_data(
+            request.resume_data,
+            request.resume_text
+        )
+        
+        return {
+            "success": True,
+            "visualization": viz_data
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Visualization failed: {str(e)}"
+        )
+
+
+@router.post("/ner/entity-table")
+async def get_entity_table(request: NERVisualizationRequest):
+    """
+    Get formatted entity table from extracted resume data
+    
+    Returns table with columns: Category, Value, Confidence
+    """
+    try:
+        extractor = get_ner_extractor()
+        entity_table = extractor.get_entity_table(request.resume_data)
+        
+        return {
+            "success": True,
+            "total_entities": len(entity_table),
+            "entity_table": entity_table
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Entity table generation failed: {str(e)}"
+        )
+
+
+@router.post("/ner/summary")
+async def get_entity_summary(request: NERVisualizationRequest):
+    """
+    Get summary statistics of extracted entities
+    
+    Returns counts for:
+    - Skills (primary & secondary)
+    - Education degrees
+    - Job titles
+    - Certifications
+    - Contact info
+    """
+    try:
+        extractor = get_ner_extractor()
+        summary = extractor.get_entity_summary(request.resume_data)
+        
+        return {
+            "success": True,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Summary generation failed: {str(e)}"
+        )
+
+
+@router.post("/ner/highlighted-text")
+async def get_highlighted_text(request: NERVisualizationRequest):
+    """
+    Get HTML with highlighted entities in the resume text
+    
+    Different entity types are highlighted with different colors:
+    - Skills: Gold
+    - Education: Sky Blue
+    - Job Titles: Light Green
+    - Company: Plum
+    - Certifications: Khaki
+    """
+    try:
+        extractor = get_ner_extractor()
+        highlighted = extractor.highlight_entities_in_text(
+            request.resume_text,
+            request.resume_data
+        )
+        
+        return {
+            "success": True,
+            "highlighted_html": highlighted
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Text highlighting failed: {str(e)}"
+        )
+
+@router.post("/extract-skills")
+async def extract_skills(request: ResumeParseRequest):
+    """
+    Extract technical skills from resume text
+    
+    Returns a list of all identified technical skills including:
+    - Programming languages (Python, Java, etc.)
+    - Web frameworks (React, Django, etc.)
+    - Databases (SQL, MongoDB, etc.)
+    - Cloud platforms (AWS, Azure, etc.)
+    - BI/Data tools (Power BI, Tableau, Excel, etc.)
+    - And 20+ other skill categories
+    """
+    try:
+        if not request.resume_text or not request.resume_text.strip():
+            return {
+                "success": True,
+                "skills": [],
+                "skill_count": 0,
+                "message": "Empty resume text"
+            }
+        
+        extractor = get_ner_extractor()
+        skills = extractor.extract_skills(request.resume_text)
+        
+        return {
+            "success": True,
+            "skills": skills,
+            "skill_count": len(skills),
+            "message": f"Successfully extracted {len(skills)} skills"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Skill extraction failed: {str(e)}"
+        )
