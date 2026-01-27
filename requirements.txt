@@ -42,6 +42,7 @@ bert-score==0.3.13
 
 pymupdf==1.23.8
 python-docx==1.1.0
+pywin32>=306  # For DOC file support (Windows only)
 
 streamlit>=1.32.0
 plotly==5.18.0
