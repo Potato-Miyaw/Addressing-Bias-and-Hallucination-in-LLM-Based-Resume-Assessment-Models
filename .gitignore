@@ -1,7 +1,7 @@
 *.zip
 *__pycache__
 /tests
-/README_RESUME_NER.md
 /colab links
 /models
 /.env
+/guides
