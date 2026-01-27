@@ -14,12 +14,14 @@ sys.path.insert(0, project_root)
 
 from backend.services.feature4_matcher import JobResumeMatcher
 from backend.services.feature2_bert_ner import ResumeNERExtractor
+from backend.services.feature2_hybrid_ner import HybridResumeNERExtractor
 
 router = APIRouter(prefix="/api/match", tags=["Matching"])
 
 # Lazy load services
 job_matcher = None
 ner_extractor = None
+hybrid_extractor = None
 
 def get_job_matcher():
     global job_matcher
@@ -32,6 +34,12 @@ def get_ner_extractor():
     if ner_extractor is None:
         ner_extractor = ResumeNERExtractor()
     return ner_extractor
+
+def get_hybrid_extractor():
+    global hybrid_extractor
+    if hybrid_extractor is None:
+        hybrid_extractor = HybridResumeNERExtractor()
+    return hybrid_extractor
 
 # Pydantic models
 class MatchRequest(BaseModel):
@@ -49,7 +57,7 @@ async def match_resume_to_job(request: MatchRequest):
     """
     try:
         matcher = get_job_matcher()
-        extractor = get_ner_extractor()
+        extractor = get_hybrid_extractor()  # Use HYBRID for best results!
         
         resume_data = request.resume_data
         
@@ -61,7 +69,7 @@ async def match_resume_to_job(request: MatchRequest):
         )
         
         if needs_extraction:
-            print(f"Running NER extraction for resume {request.resume_id}")
+            print(f"Running HYBRID NER extraction for resume {request.resume_id}")
             resume_data = extractor.parse_resume(resume_data['text'])
         
         # Now match
@@ -92,7 +100,7 @@ async def batch_match_resumes(
 ):
     """Match multiple resumes to a single job"""
     matcher = get_job_matcher()
-    extractor = get_ner_extractor()
+    extractor = get_hybrid_extractor()  # Use HYBRID for best results!
     results = []
     
     for resume in resumes:
