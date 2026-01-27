@@ -4,8 +4,6 @@ DSA 9 MVP - FastAPI Backend (Clean Router Structure)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router
-
 import sys
 import os
 

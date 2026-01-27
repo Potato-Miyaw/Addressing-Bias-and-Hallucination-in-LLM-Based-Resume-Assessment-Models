@@ -57,6 +57,12 @@ class JobResumeMatcher:
     def match_resume_to_job(self, resume_data: Dict[str, Any], jd_data: Dict[str, Any]) -> Dict[str, float]:
         """Match resume to job description"""
         
+        # Ensure inputs are dicts
+        if not isinstance(resume_data, dict):
+            resume_data = {}
+        if not isinstance(jd_data, dict):
+            jd_data = {"required_skills": [], "required_experience": 0, "required_education": ""}
+        
         # Extract resume fields (handle both formats)
         if 'primary_skills' in resume_data:
             # New comprehensive format - COMBINE primary + secondary

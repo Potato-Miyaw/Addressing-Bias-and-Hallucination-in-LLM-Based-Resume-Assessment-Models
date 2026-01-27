@@ -266,6 +266,50 @@ with tab2:
                 
                 st.markdown("**Storage Info:**")
                 st.write(data.get('message', 'Resume stored successfully'))
+                
+                # Extract and display skills
+                st.markdown("---")
+                st.markdown("**🛠️ Extracted Skills:**")
+                
+                # Get resume text from data
+                resume_text = data.get('text', '')
+                
+                if resume_text:
+                    # Make API call to extract skills
+                    try:
+                        skill_response = requests.post(
+                            f"{API_BASE_URL}/api/resume/extract-skills",
+                            json={"resume_text": resume_text},
+                            timeout=10
+                        )
+                        
+                        if skill_response.status_code == 200:
+                            skills_data = skill_response.json()
+                            extracted_skills = skills_data.get('skills', [])
+                            
+                            if extracted_skills:
+                                # Display skills as colored badges
+                                st.write("")
+                                cols = st.columns(len(extracted_skills) if len(extracted_skills) <= 6 else 6)
+                                
+                                for i, skill in enumerate(extracted_skills[:24]):  # Show max 24 skills
+                                    col = cols[i % 6]
+                                    with col:
+                                        st.markdown(f"<span style='background-color: #1f77b4; color: white; padding: 5px 10px; border-radius: 15px; display: inline-block; font-size: 12px; margin: 3px;'>🔧 {skill}</span>", unsafe_allow_html=True)
+                                
+                                st.caption(f"📊 Total skills found: {len(extracted_skills)}")
+                                
+                                if len(extracted_skills) > 24:
+                                    with st.expander(f"View all {len(extracted_skills)} skills"):
+                                        st.write(", ".join(extracted_skills))
+                            else:
+                                st.info("No skills detected in this resume")
+                        else:
+                            st.warning("Could not extract skills - API error")
+                    except Exception as e:
+                        st.warning(f"Skills extraction failed: {str(e)}")
+                else:
+                    st.info("Resume text not available for skill extraction")
 
 # ============================================
 # TAB 3: MATCHING & RANKING

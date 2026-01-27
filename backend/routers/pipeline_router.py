@@ -48,6 +48,8 @@ async def complete_pipeline(request: CompletePipelineRequest):
         
         # Step 1: Extract JD
         jd_data = extractor.extract_jd_data(request.jd_text)
+        if not isinstance(jd_data, dict):
+            jd_data = {"required_skills": [], "required_experience": 0, "required_education": ""}
         
         import hashlib
         job_id = hashlib.md5(request.jd_text.encode()).hexdigest()[:12]
@@ -56,24 +58,37 @@ async def complete_pipeline(request: CompletePipelineRequest):
         candidates = []
         
         for i, resume_text in enumerate(request.resume_texts):
-            # Parse resume
-            resume_data = ner.parse_resume(resume_text)
-            resume_id = hashlib.md5(resume_text.encode()).hexdigest()[:12]
-            
-            # Verify claims
-            verification = verifier.verify_resume_data(resume_data)
-            
-            # Match to job
-            match_result = matcher.match_resume_to_job(resume_data, jd_data)
-            
-            candidates.append({
-                "resume_id": resume_id,
-                "candidate_name": f"Candidate {i+1}",
-                "resume_data": resume_data,
-                "match_data": match_result,
-                "verification": verification,
-                "demographics": {"gender": 1, "race_gender": "Unknown"}
-            })
+            try:
+                # Parse resume
+                resume_data = ner.parse_resume(resume_text)
+                if not isinstance(resume_data, dict):
+                    resume_data = {}
+                
+                resume_id = hashlib.md5(resume_text.encode()).hexdigest()[:12]
+                
+                # Verify claims
+                verification = verifier.verify_resume_data(resume_data)
+                if not isinstance(verification, dict):
+                    verification = {"status": "PENDING", "hallucinations": []}
+                
+                # Match to job
+                match_result = matcher.match_resume_to_job(resume_data, jd_data)
+                if not isinstance(match_result, dict):
+                    match_result = {"match_score": 0, "skill_match": 0}
+                
+                candidates.append({
+                    "resume_id": resume_id,
+                    "candidate_name": resume_data.get("name", f"Candidate {i+1}"),
+                    "resume_data": resume_data,
+                    "match_data": match_result,
+                    "verification": verification,
+                    "demographics": {"gender": 1, "race_gender": "Unknown"}
+                })
+            except Exception as e:
+                import logging
+                logging.error(f"Error processing resume {i+1}: {str(e)}")
+                # Skip this resume but continue with others
+                continue
         
         # Step 5: Rank candidates
         ranked = ranker.rank_candidates(
