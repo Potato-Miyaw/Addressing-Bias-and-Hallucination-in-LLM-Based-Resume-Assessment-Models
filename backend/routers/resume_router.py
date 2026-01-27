@@ -15,6 +15,7 @@ sys.path.insert(0, project_root)
 
 from backend.services.feature2_bert_ner import ResumeNERExtractor
 from backend.services.feature2_resume_ner_v2 import ResumeNERExtractorV2
+from backend.services.feature2_hybrid_ner import HybridResumeNERExtractor
 from backend.utils.document_parser import extract_text_from_file
 
 router = APIRouter(prefix="/api/resume", tags=["Resume"])
@@ -22,6 +23,7 @@ router = APIRouter(prefix="/api/resume", tags=["Resume"])
 # Lazy load services
 ner_extractor = None
 ner_extractor_v2 = None
+hybrid_extractor = None
 
 def get_ner_extractor():
     global ner_extractor
@@ -34,6 +36,12 @@ def get_ner_extractor_v2():
     if ner_extractor_v2 is None:
         ner_extractor_v2 = ResumeNERExtractorV2()
     return ner_extractor_v2
+
+def get_hybrid_extractor():
+    global hybrid_extractor
+    if hybrid_extractor is None:
+        hybrid_extractor = HybridResumeNERExtractor()
+    return hybrid_extractor
 
 # Pydantic models
 class ResumeParseRequest(BaseModel):
@@ -137,6 +145,57 @@ async def parse_resume_v2(request: ResumeParseRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Resume V2 parsing failed: {str(e)}"
+        )
+
+@router.post("/parse-hybrid")
+async def parse_resume_hybrid(request: ResumeParseRequest):
+    """
+    HYBRID Resume Parsing - Best of Both Worlds!
+    Combines Generic BERT NER (good at names) + Resume-Specific NER (good at skills)
+    """
+    try:
+        extractor = get_hybrid_extractor()
+        resume_data = extractor.parse_resume(request.resume_text)
+        
+        resume_id = hashlib.md5(request.resume_text.encode()).hexdigest()[:12]
+        
+        if resume_data.get("extraction_status") == "FAILED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=resume_data.get("error", "Hybrid resume parsing failed")
+            )
+        
+        if request.candidate_name:
+            resume_data["candidate_name"] = request.candidate_name
+        
+        return {
+            "success": True,
+            "resume_id": resume_id,
+            "name": resume_data.get("name", "Unknown"),
+            "email": resume_data.get("email_address", "unknown@email.com"),
+            "phone": resume_data.get("contact_number", [""])[0] if resume_data.get("contact_number") else "",
+            "skills": resume_data.get("primary_skills", []) + resume_data.get("secondary_skills", []),
+            "primary_skills": resume_data.get("primary_skills", []),
+            "secondary_skills": resume_data.get("secondary_skills", []),
+            "experience": {
+                "years": resume_data.get("total_experience_(months)", 0) // 12,
+                "months": resume_data.get("total_experience_(months)", 0),
+                "companies": [resume_data.get("current_company_name", "Unknown")]
+            },
+            "education": resume_data.get("education", []),
+            "certifications": [],
+            "status": resume_data.get("extraction_status", "SUCCESS"),
+            "message": f"Parsed with {resume_data.get('model_type', 'HYBRID')}",
+            "saved_to_db": False,
+            "model_type": resume_data.get("model_type", "HYBRID (Generic + Resume-Specific)"),
+            "entities": resume_data.get("entities", [])
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Hybrid resume parsing failed: {str(e)}"
         )
 
 @router.post("/upload")
