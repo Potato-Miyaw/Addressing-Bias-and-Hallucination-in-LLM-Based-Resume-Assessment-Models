@@ -12,7 +12,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 # Import tab modules
-from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab, multilang_tab
+from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab
 
 
 
@@ -82,51 +82,36 @@ with st.sidebar:
 st.markdown('<div class="main-header">👨‍💼 HR Portal - Resume Screening System</div>', unsafe_allow_html=True)
 
 # Tabs
-tabs = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📄 Job Description", 
     "📋 Resumes", 
-    "🌍 Multi-Language", # Moved here
     "🎯 Matching & Ranking",
     "✅ Verification",
     "🚀 Complete Pipeline",
     "🎓 HR Feedback",
-    "🔬 Multi-Model Bias Detection"
+    "🔬 Multi-Model Bias Detection" #feature 6
 ])
 
-(
-    job_description_tab_ui, 
-    resumes_tab_ui, 
-    multilang_tab_ui, 
-    matching_tab_ui, 
-    verification_tab_ui, 
-    pipeline_tab_ui, 
-    feedback_tab_ui, 
-    bias_tab_ui
-) = tabs
-
-with job_description_tab_ui:
+with tab1:
     job_description_tab.render(API_BASE_URL)
 
-with resumes_tab_ui:
+with tab2:
     resumes_tab.render(API_BASE_URL)
 
-with multilang_tab_ui:
-    multilang_tab.render(API_BASE_URL)
-
-with matching_tab_ui:
+with tab3:
     matching_tab.render(API_BASE_URL)
 
-with verification_tab_ui:
+with tab4:
     verification_tab.render(API_BASE_URL)
 
-with pipeline_tab_ui:
+with tab5:
     pipeline_tab.render(API_BASE_URL)
 
-with feedback_tab_ui:
+with tab6:
     feedback_tab.render(API_BASE_URL)
 
-with bias_tab_ui:
-    bias_tab.render(API_BASE_URL)
+with tab7:
+    bias_tab.render(API_BASE_URL)  # Feature 6
     
 
 

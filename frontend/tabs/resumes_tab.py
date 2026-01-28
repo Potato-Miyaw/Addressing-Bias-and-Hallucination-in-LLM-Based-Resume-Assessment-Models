@@ -75,7 +75,7 @@ def render(api_base_url: str):
                 
                 with col2:
                     email = data.get('email', 'N/A') or 'N/A'
-                    st.metric("Email", email if email else 'N/A')
+                    st.metric("Email", email[:20] if email else 'N/A')
                     st.metric("Phone", data.get('phone', 'N/A') or 'N/A')
                 
                 with col3:
