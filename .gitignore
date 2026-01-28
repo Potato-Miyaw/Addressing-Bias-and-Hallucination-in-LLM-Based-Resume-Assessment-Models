@@ -5,3 +5,5 @@
 /models
 /.env
 /guides
+backend_server.err
+backend_server.out
