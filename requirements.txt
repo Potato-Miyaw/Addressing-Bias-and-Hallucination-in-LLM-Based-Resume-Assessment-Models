@@ -55,3 +55,5 @@ openpyxl==3.1.2
 
 # pywin32; sys_platform == 'win32'
 pi
+
+deep-translator

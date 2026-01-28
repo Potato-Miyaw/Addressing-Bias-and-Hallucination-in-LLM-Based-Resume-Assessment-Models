@@ -26,6 +26,7 @@ from backend.routers import (
     feedback_router,
     bias_router,  # Multi-Model Bias Detection
     notification_router,
+    multilang_router # Feature 6
 )
 
 # Initialize FastAPI
@@ -52,6 +53,8 @@ app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
 app.include_router(bias_router.router)  # Multi-Model Bias Detection
+app.include_router(bias_router.router) # Multi-Model Bias Detection
+app.include_router(multilang_router.router) # Feature 6
 app.include_router(feedback_router.router)
 app.include_router(notification_router.router)
 
