@@ -4,8 +4,6 @@ DSA 9 MVP - FastAPI Backend (Clean Router Structure)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router
-
 import sys
 import os
 
@@ -14,7 +12,15 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import routers
-from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router
+from backend.routers import (
+    jd_router, 
+    resume_router, 
+    verification_router, 
+    matching_router, 
+    ranking_router, 
+    pipeline_router,
+    bias_router  # Multi-Model Bias Detection
+)
 
 # Initialize FastAPI
 app = FastAPI(
@@ -39,6 +45,7 @@ app.include_router(verification_router.router)
 app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
+app.include_router(bias_router.router) # Multi-Model Bias Detection
 
 # Health check
 @app.get("/")
@@ -61,10 +68,15 @@ async def health_check():
             "resume": "/api/resume/*",
             "verify": "/api/verify/*",
             "match": "/api/match/*",
-            "rank": "/api/rank/*"
+            "rank": "/api/rank/*",
+            "bias": "/api/bias/*" # Multi-Model Bias Detection
         }
     }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8000
+    )

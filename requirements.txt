@@ -1,5 +1,5 @@
 numpy>=1.23
-pandas>=1.5,<2.2
+pandas
 scikit-learn>=1.3
 
 xgboost>=2.0
@@ -9,10 +9,11 @@ aif360>=0.5.0
 
 matplotlib>=3.7
 statsmodels>=0.14
+plotly==5.18.0
 
 fastapi
 uvicorn[standard]==0.24.0
-pydantic>=2.7.0
+pydantic
 python-multipart==0.0.6
 python-dotenv==1.0.0
 starlette
@@ -28,7 +29,7 @@ datasets>=2.19.0
 accelerate>=0.20.0
 tf-keras>=2.15.0
 
-spacy==3.7.2
+spacy
 keybert==0.8.3
 nltk==3.8.1
 bert-score==0.3.13
@@ -42,6 +43,7 @@ bert-score==0.3.13
 
 pymupdf==1.23.8
 python-docx==1.1.0
+pywin32>=306  # For DOC file support (Windows only)
 
 streamlit>=1.32.0
 plotly==5.18.0
@@ -52,3 +54,4 @@ joblib==1.3.2
 openpyxl==3.1.2
 
 # pywin32; sys_platform == 'win32'
+pi
