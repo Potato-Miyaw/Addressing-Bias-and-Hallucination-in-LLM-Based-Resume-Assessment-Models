@@ -5,6 +5,7 @@ User-friendly interface for LLM-based hiring system
 
 import streamlit as st
 import requests
+
 import sys
 import os
 
@@ -13,7 +14,14 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 # Import tab modules
-from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab
+from tabs import (
+    job_description_tab, 
+    resumes_tab, 
+    matching_tab, 
+    verification_tab, 
+    pipeline_tab,
+    bias_tab  # Feature 6: Multi-Model Bias Detection
+)
 
 # API Configuration
 API_BASE_URL = "http://localhost:8000"
@@ -66,6 +74,10 @@ if 'resumes_data' not in st.session_state:
     st.session_state.resumes_data = []
 if 'pipeline_results' not in st.session_state:
     st.session_state.pipeline_results = None
+if 'experiment_status' not in st.session_state:
+    st.session_state.experiment_status = {}
+if 'bias_results' not in st.session_state:
+    st.session_state.bias_results = None
 
 # Sidebar
 with st.sidebar:
@@ -77,6 +89,7 @@ with st.sidebar:
     st.markdown("- ✅ Hallucination Detection")
     st.markdown("- 🎯 Job-Resume Matching")
     st.markdown("- ⚖️ Fairness-Aware Ranking")
+    st.markdown("- 🔬 Multi-Model Bias Detection")  # Feature 6
     
     st.markdown("---")
     st.markdown("**API Status:**")
@@ -95,13 +108,15 @@ with st.sidebar:
 st.markdown('<div class="main-header">💼 DSA 9 MVP - LLM Hiring System</div>', unsafe_allow_html=True)
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📄 Job Description", 
     "📋 Resumes", 
     "🎯 Matching & Ranking",
     "✅ Verification",
-    "🚀 Complete Pipeline"
+    "🚀 Complete Pipeline",
+    "🔬 Multi-Model Bias Detection" #feature 6
 ])
+
 
 with tab1:
     job_description_tab.render(API_BASE_URL)
@@ -117,6 +132,10 @@ with tab4:
 
 with tab5:
     pipeline_tab.render(API_BASE_URL)
+
+with tab6:
+    bias_tab.render(API_BASE_URL)  # Feature 6
+    
 
 # Footer
 st.markdown("---")
