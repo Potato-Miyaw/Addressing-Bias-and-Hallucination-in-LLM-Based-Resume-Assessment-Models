@@ -1,0 +1,21 @@
+[33m7220a35[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mIqraJavedd-LLM-Bias[m[33m)[m HEAD@{0}: rebase (abort): returning to refs/heads/IqraJavedd-LLM-Bias
+[33m97c6b68[m HEAD@{1}: pull origin IqraJavedd-LLM-Bias --rebase (pick): Add files via upload
+[33ma442a53[m HEAD@{2}: pull origin IqraJavedd-LLM-Bias --rebase (pick): Fix formatting of README title
+[33m29f5b3d[m HEAD@{3}: pull origin IqraJavedd-LLM-Bias --rebase (pick): Resume Hallucination Push
+[33me128e52[m HEAD@{4}: pull origin IqraJavedd-LLM-Bias --rebase (pick): deploying 1st modeling task
+[33m79e6051[m[33m ([m[1;31morigin/IqraJavedd-LLM-Bias[m[33m)[m HEAD@{5}: pull origin IqraJavedd-LLM-Bias --rebase (start): checkout 79e6051a3dea8986190fc5ebfa5f276c73364078
+[33m7220a35[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mIqraJavedd-LLM-Bias[m[33m)[m HEAD@{6}: checkout: moving from main to IqraJavedd-LLM-Bias
+[33m8a17d53[m[33m ([m[1;32mmain[m[33m)[m HEAD@{7}: commit (merge): Add Feature 6: Multi-Model Bias Detection & Benchmarking Engine
+[33m8611104[m HEAD@{8}: reset: moving to HEAD
+[33m8611104[m HEAD@{9}: checkout: moving from IqraJavedd-LLM-Bias to main
+[33m7220a35[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mIqraJavedd-LLM-Bias[m[33m)[m HEAD@{10}: commit (merge): Updated streamlit
+[33mb56712d[m HEAD@{11}: reset: moving to HEAD
+[33mb56712d[m HEAD@{12}: checkout: moving from main to IqraJavedd-LLM-Bias
+[33m8611104[m HEAD@{13}: reset: moving to HEAD
+[33m8611104[m HEAD@{14}: reset: moving to HEAD
+[33m8611104[m HEAD@{15}: reset: moving to HEAD
+[33m8611104[m HEAD@{16}: reset: moving to HEAD
+[33m8611104[m HEAD@{17}: commit: Fix: update FastAPI app initialization and Streamlit config
+[33m944b1c5[m HEAD@{18}: commit (merge): Merge branch 'main' of https://github.com/Potato-Miyaw/Addressing-Bias-and-Hallucination-in-LLM-Based-Resume-Assessment-Models
+[33mcc7d211[m HEAD@{19}: commit: Added visualizations to bias detection
+[33m8b5e9a9[m HEAD@{20}: clone: from https://github.com/Potato-Miyaw/Addressing-Bias-and-Hallucination-in-LLM-Based-Resume-Assessment-Models.git
