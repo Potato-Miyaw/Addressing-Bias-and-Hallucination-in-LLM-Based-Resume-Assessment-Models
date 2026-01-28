@@ -108,7 +108,7 @@ def render(api_base_url: str):
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            if st.button("🧪 Generate Test Cases Only", use_container_width=True):
+            if st.button("🧪 Generate Test Cases Only"):
                 if not selected_models or not selected_roles:
                     st.error("Please select at least one model and one job role")
                 else:
@@ -139,7 +139,7 @@ def render(api_base_url: str):
                             st.error(f"Error: {str(e)}")
         
         with col_btn2:
-            if st.button("🚀 Run Full Experiment", type="primary", use_container_width=True):
+            if st.button("🚀 Run Full Experiment", type="primary"):
                 if not selected_models or not selected_roles:
                     st.error("Please select at least one model and one job role")
                 else:
@@ -209,7 +209,7 @@ def render(api_base_url: str):
             job_role = st.selectbox("Job Role", available_roles if available_roles else ["Data Analyst"])
             quality = st.selectbox("Resume Quality", available_quality if available_quality else ["high", "medium", "low"])
         
-        if st.button("📄 Generate Resume", use_container_width=True):
+        if st.button("📄 Generate Resume"):
             with st.spinner("Generating resume..."):
                 try:
                     response = requests.post(
@@ -264,7 +264,7 @@ def render(api_base_url: str):
             key="analyze_job_role"
         )
         
-        if st.button("🔍 Analyze for Bias Markers", use_container_width=True):
+        if st.button("🔍 Analyze for Bias Markers"):
             if not resume_text.strip():
                 st.error("Please enter resume text")
             else:
@@ -340,7 +340,7 @@ def render(api_base_url: str):
         st.subheader("Experiment Results & Analysis")
         
         # Check experiment status
-        if st.button("🔄 Refresh Status", use_container_width=True):
+        if st.button("🔄 Refresh Status"):
             try:
                 response = requests.get(f"{api_base_url}/api/bias/experiment-status", timeout=5)
                 if response.status_code == 200:
@@ -369,7 +369,7 @@ def render(api_base_url: str):
                 st.warning(f"⏸️ **Status:** {status}")
         
         # Get results if completed
-        if st.button("📊 Load Results", use_container_width=True):
+        if st.button("📊 Load Results"):
             try:
                 response = requests.get(f"{api_base_url}/api/bias/experiment-results", timeout=30)
                 if response.status_code == 200:
@@ -429,7 +429,7 @@ def render(api_base_url: str):
                              "Status": "✅ Pass" if v >= 0.8 else "⚠️ Fail (< 0.8)"}
                             for k, v in impact_ratios.items()
                         ])
-                        st.dataframe(ir_df, use_container_width=True, hide_index=True)
+                        st.dataframe(ir_df, hide_index=True)
             
             # Comparison Summary
             summary = results.get("comparison_summary", {})

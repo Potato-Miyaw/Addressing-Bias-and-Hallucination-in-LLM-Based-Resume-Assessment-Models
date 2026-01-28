@@ -78,7 +78,7 @@ with col1:
     """, unsafe_allow_html=True)
 
     
-    if st.button("🚀 Go to Candidate Portal", type="primary", use_container_width=True):
+    if st.button("🚀 Go to Candidate Portal", type="primary"):
         st.switch_page("pages/Candidate_Portal.py")
 
 with col2:
@@ -98,7 +98,7 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("🚀 Go to HR Portal", type="primary", use_container_width=True):
+    if st.button("🚀 Go to HR Portal", type="primary"):
         st.switch_page("pages/HR_Portal.py")
 
 st.markdown("---")

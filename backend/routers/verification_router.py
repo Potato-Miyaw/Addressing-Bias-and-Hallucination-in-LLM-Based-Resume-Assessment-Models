@@ -76,12 +76,12 @@ async def verify_resume(request: VerifyResumeRequest):
         ground_truth_data = request.ground_truth_data
         
         print("\n" + "="*80)
-        print("🔍 VERIFICATION DEBUG LOG")
+        print("VERIFICATION DEBUG LOG")
         print("="*80)
         
         # Log what fields are in resume_extractions
-        print(f"\n📝 Resume Extractions Fields: {list(request.resume_extractions.keys())}")
-        print(f"📝 Resume Extractions Values:")
+        print(f"\nResume Extractions Fields: {list(request.resume_extractions.keys())}")
+        print("Resume Extractions Values:")
         for field, value in request.resume_extractions.items():
             if field == 'text':
                 print(f"   - {field}: [TEXT LENGTH: {len(str(value))} chars]")
@@ -90,7 +90,7 @@ async def verify_resume(request: VerifyResumeRequest):
         
         # AUTO-EXTRACT GROUND TRUTH FROM RAW TEXT
         if request.auto_extract_ground_truth and 'text' in request.resume_extractions:
-            print("\n🔍 Auto-extracting ground truth from resume text...")
+            print("\nAuto-extracting ground truth from resume text...")
             
             gt_extractor = get_ground_truth_extractor()
             extracted_gt = gt_extractor.extract_ground_truth_from_text(
@@ -98,9 +98,9 @@ async def verify_resume(request: VerifyResumeRequest):
                 request.resume_extractions
             )
             
-            print(f"\n✅ Extracted {len(extracted_gt)} ground truth fields from text")
-            print(f"📊 Ground Truth Fields: {list(extracted_gt.keys())}")
-            print(f"📊 Ground Truth Values:")
+            print(f"\nExtracted {len(extracted_gt)} ground truth fields from text")
+            print(f"Ground Truth Fields: {list(extracted_gt.keys())}")
+            print("Ground Truth Values:")
             for field, value in extracted_gt.items():
                 print(f"   - {field}: {value}")
             
@@ -110,7 +110,7 @@ async def verify_resume(request: VerifyResumeRequest):
             else:
                 ground_truth_data = extracted_gt
         
-        print(f"\n🔄 Starting verification with {len(ground_truth_data)} ground truth fields...")
+        print(f"\nStarting verification with {len(ground_truth_data)} ground truth fields...")
         
         # Verify claims
         report = verifier.verify_resume_data(
@@ -118,7 +118,7 @@ async def verify_resume(request: VerifyResumeRequest):
             ground_truth_data
         )
         
-        print(f"\n📊 VERIFICATION RESULTS:")
+        print("\nVERIFICATION RESULTS:")
         print(f"   - Total claims checked: {report['total_claims']}")
         print(f"   - Verified claims: {report['verified_claims']}")
         print(f"   - Flagged claims: {report['flagged_claims']}")
@@ -126,9 +126,9 @@ async def verify_resume(request: VerifyResumeRequest):
         print(f"   - Hallucination rate: {report['hallucination_rate']:.2%}")
         
         if report.get('details'):
-            print(f"\n📋 Detailed Results:")
+            print("\nDetailed Results:")
             for detail in report['details']:
-                status_icon = "✅" if not detail['is_hallucination'] else "❌"
+                status_icon = "OK" if not detail['is_hallucination'] else "FAIL"
                 print(f"   {status_icon} {detail['field']}: {detail['verdict']} (confidence: {detail['confidence']:.2f})")
                 print(f"      Extraction: {detail['extraction']}")
                 print(f"      Ground Truth: {detail['ground_truth']}")
@@ -145,7 +145,7 @@ async def verify_resume(request: VerifyResumeRequest):
         }
     except Exception as e:
         import traceback
-        print("\n❌ VERIFICATION ERROR:")
+        print("\nVERIFICATION ERROR:")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

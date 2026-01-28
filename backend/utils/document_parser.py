@@ -40,17 +40,27 @@ def extract_pdf_text(file_stream):
 
 def extract_docx_text(file_stream):
     """Extract text from DOCX using python-docx and XML parsing"""
+    # First try python-docx (more robust for many files)
+    try:
+        doc = Document(BytesIO(file_stream))
+        paragraphs = [p.text for p in doc.paragraphs if p.text and p.text.strip()]
+        if paragraphs:
+            return "\n".join(paragraphs)
+    except Exception:
+        # Fall back to XML extraction below
+        pass
+
     try:
         # Read the stream into BytesIO
         docx_bytes = BytesIO(file_stream)
-        
+
         # Open the DOCX file as a ZIP archive
         with zipfile.ZipFile(docx_bytes, 'r') as docx_zip:
             namespaces = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
-            
+
             # Initialize list for all extracted text
             all_text = []
-            
+
             # Function to extract text from an XML part
             def extract_text_from_xml(xml_content):
                 root = fromstring(xml_content)
@@ -60,26 +70,26 @@ def extract_docx_text(file_stream):
                     if texts:
                         text_parts.append(''.join(texts))
                 return text_parts
-            
+
             # Extract main document text
             if 'word/document.xml' in docx_zip.namelist():
-                document_xml = docx_zip.read('word/document.xml').decode('utf-8')
+                document_xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
                 main_text = extract_text_from_xml(document_xml)
                 all_text.extend(main_text)
-            
+
             # Extract headers
             header_files = [f for f in docx_zip.namelist() if f.startswith('word/header')]
             headers_text = []
             for header_file in header_files:
-                header_xml = docx_zip.read(header_file).decode('utf-8')
+                header_xml = docx_zip.read(header_file).decode('utf-8', errors='ignore')
                 headers_text.extend(extract_text_from_xml(header_xml))
             if headers_text:
                 all_text.append("\nHeaders:")
                 all_text.extend(headers_text)
-            
+
             # Extract text boxes (in the main document)
             if 'word/document.xml' in docx_zip.namelist():
-                document_xml = docx_zip.read('word/document.xml').decode('utf-8')
+                document_xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
                 root = fromstring(document_xml)
                 text_boxes = []
                 for text_box in root.findall('.//w:txbxContent', namespaces):
@@ -89,9 +99,9 @@ def extract_docx_text(file_stream):
                 if text_boxes:
                     all_text.append("\nText Boxes:")
                     all_text.extend(text_boxes)
-            
+
             return "\n".join(all_text) if all_text else None
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract text from DOCX: {e}")
 
