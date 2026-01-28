@@ -6,26 +6,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
-from dotenv import load_dotenv
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# Load environment variables
-load_dotenv()
-
 # Import routers
 from backend.routers import (
-    jd_router,
-    resume_router,
-    verification_router,
-    matching_router,
-    ranking_router,
+    jd_router, 
+    resume_router, 
+    verification_router, 
+    matching_router, 
+    ranking_router, 
     pipeline_router,
     feedback_router,
-    bias_router,  # Multi-Model Bias Detection
-    notification_router,
+    bias_router  # Multi-Model Bias Detection
 )
 
 # Initialize FastAPI
@@ -51,9 +46,8 @@ app.include_router(verification_router.router)
 app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
-app.include_router(bias_router.router)  # Multi-Model Bias Detection
+app.include_router(bias_router.router) # Multi-Model Bias Detection
 app.include_router(feedback_router.router)
-app.include_router(notification_router.router)
 
 # Health check
 @app.get("/")
@@ -77,9 +71,11 @@ async def health_check():
             "verify": "/api/verify/*",
             "match": "/api/match/*",
             "rank": "/api/rank/*",
-            "bias": "/api/bias/*",  # Multi-Model Bias Detection
+            "bias": "/api/bias/*",# Multi-Model Bias Detection
             "pipeline": "/api/pipeline/*",
-            "feedback": "/api/feedback/*"
+            "feedback": "/api/feedback/*",
+            "match": "/api/match/*",
+            "rank": "/api/rank/*"
         }
     }
 
