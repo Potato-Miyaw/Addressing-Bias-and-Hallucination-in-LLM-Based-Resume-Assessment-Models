@@ -134,18 +134,14 @@ Resume 2: Bob Jones. 3 years Python experience..."""
                     )
         # Send summary to Teams
         st.subheader("Send Summary to Teams")
-        teams_match_threshold = st.slider("Good Match Threshold (%)", 0, 100, 70, key="pipeline_teams_match_threshold")
-        teams_hire_threshold = st.slider("Hire Threshold", 0.0, 1.0, 0.5, step=0.05, key="pipeline_teams_hire_threshold")
         if st.button("Send Pipeline Summary to Teams"):
             try:
                 notify_payload = {
                     "job_id": results.get('job_id', 'JOB'),
                     "ranked_candidates": results.get('ranked_candidates', []),
                     "fairness_metrics": fairness_metrics or {},
-                    "match_threshold": teams_match_threshold / 100.0,
-                    "hire_threshold": teams_hire_threshold,
                 }
-                notify_resp = requests.post(f"{api_base_url}/api/notify/teams", json=notify_payload)
+                notify_resp = requests.post(f"{api_base_url}/api/notify/power-automate", json=notify_payload)
                 if notify_resp.status_code == 200:
                     st.success("Teams notification sent")
                 else:

@@ -193,18 +193,14 @@ def render(api_base_url: str):
                     )
             # Send summary to Teams
             st.subheader("Send Summary to Teams")
-            teams_match_threshold = st.slider("Good Match Threshold (%)", 0, 100, 70, key="teams_match_threshold")
-            teams_hire_threshold = st.slider("Hire Threshold", 0.0, 1.0, 0.5, step=0.05, key="teams_hire_threshold")
             if st.button("Send to Teams"):
                 try:
                     notify_payload = {
                         "job_id": getattr(st.session_state, 'rank_job_id', 'JOB'),
                         "ranked_candidates": st.session_state.ranked_candidates,
                         "fairness_metrics": fairness_metrics or {},
-                        "match_threshold": teams_match_threshold / 100.0,
-                        "hire_threshold": teams_hire_threshold,
                     }
-                    notify_resp = requests.post(f"{api_base_url}/api/notify/teams", json=notify_payload)
+                    notify_resp = requests.post(f"{api_base_url}/api/notify/power-automate", json=notify_payload)
                     if notify_resp.status_code == 200:
                         st.success("Teams notification sent")
                     else:
