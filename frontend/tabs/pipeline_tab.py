@@ -35,10 +35,6 @@ Resume 2: Bob Jones. 3 years Python experience..."""
     
     with col2:
         use_pipeline_fairness = st.checkbox("Enable Fairness", value=False)
-        fairness_method = None
-        if use_pipeline_fairness:
-            fairness_method = st.selectbox("Fairness Method", ["expgrad", "reweighing", "threshold"], index=0, key="pipeline_fairness_method")
-
         
         if st.button("🚀 Run Complete Pipeline", type="primary"):
             if pipeline_jd and pipeline_resumes:
@@ -52,8 +48,7 @@ Resume 2: Bob Jones. 3 years Python experience..."""
                             json={
                                 "jd_text": pipeline_jd,
                                 "resume_texts": resume_texts,
-                                "use_fairness": use_pipeline_fairness,
-                                "fairness_method": fairness_method
+                                "use_fairness": use_pipeline_fairness
                             }
                         )
                         
@@ -77,80 +72,9 @@ Resume 2: Bob Jones. 3 years Python experience..."""
         st.subheader("📊 Pipeline Results")
         
         st.metric("Total Candidates Processed", results['total_candidates'])
-
-        fairness_metrics = results.get('fairness_metrics')
-        if isinstance(fairness_metrics, dict):
-            st.subheader("Fairness Metrics")
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Impact Ratio", fairness_metrics.get("impact_ratio"))
-            col2.metric("DP Diff", fairness_metrics.get("demographic_parity"))
-            col3.metric("EO Diff", fairness_metrics.get("equal_opportunity"))
-
-            st.subheader("Exports")
-            export_payload = {
-                "job_id": results.get('job_id', 'JOB'),
-                "ranked_candidates": results.get('ranked_candidates', []),
-                "fairness_metrics": fairness_metrics or {},
-                "fairness_enabled": results.get('fairness_enabled', False),
-                "hire_threshold": 0.5,
-            }
-            col_a, col_b = st.columns(2)
-            with col_a:
-                if st.button("Prepare Pipeline Shortlist CSV"):
-                    try:
-                        csv_resp = requests.post(f"{api_base_url}/api/rank/export/shortlist", json=export_payload)
-                        if csv_resp.status_code == 200:
-                            st.session_state.pipeline_shortlist_csv = csv_resp.content
-                            st.session_state.pipeline_shortlist_name = f"shortlist_{export_payload['job_id']}.csv"
-                        else:
-                            st.error(f"CSV export failed: {csv_resp.text}")
-                    except Exception as e:
-                        st.error(f"CSV export failed: {str(e)}")
-                if hasattr(st.session_state, 'pipeline_shortlist_csv'):
-                    st.download_button(
-                        label="Download Pipeline Shortlist CSV",
-                        data=st.session_state.pipeline_shortlist_csv,
-                        file_name=getattr(st.session_state, 'pipeline_shortlist_name', 'shortlist.csv'),
-                        mime="text/csv",
-                    )
-
-            with col_b:
-                if st.button("Prepare Pipeline Audit PDF"):
-                    try:
-                        pdf_resp = requests.post(f"{api_base_url}/api/rank/export/audit", json=export_payload)
-                        if pdf_resp.status_code == 200:
-                            st.session_state.pipeline_audit_pdf = pdf_resp.content
-                            st.session_state.pipeline_audit_name = f"audit_{export_payload['job_id']}.pdf"
-                        else:
-                            st.error(f"Audit export failed: {pdf_resp.text}")
-                    except Exception as e:
-                        st.error(f"Audit export failed: {str(e)}")
-                if hasattr(st.session_state, 'pipeline_audit_pdf'):
-                    st.download_button(
-                        label="Download Pipeline Audit PDF",
-                        data=st.session_state.pipeline_audit_pdf,
-                        file_name=getattr(st.session_state, 'pipeline_audit_name', 'audit.pdf'),
-                        mime="application/pdf",
-                    )
-        # Send summary to Teams
-        st.subheader("Send Summary to Teams")
-        if st.button("Send Pipeline Summary to Teams"):
-            try:
-                notify_payload = {
-                    "job_id": results.get('job_id', 'JOB'),
-                    "ranked_candidates": results.get('ranked_candidates', []),
-                    "fairness_metrics": fairness_metrics or {},
-                }
-                notify_resp = requests.post(f"{api_base_url}/api/notify/power-automate", json=notify_payload)
-                if notify_resp.status_code == 200:
-                    st.success("Teams notification sent")
-                else:
-                    st.error(f"Teams notification failed: {notify_resp.text}")
-            except Exception as e:
-                st.error(f"Teams notification failed: {str(e)}")
-
+        
         # Show top 3 candidates
-        st.subheader("?? Top Candidates")
+        st.subheader("🏆 Top Candidates")
         
         for candidate in results['ranked_candidates'][:3]:
             with st.container():
