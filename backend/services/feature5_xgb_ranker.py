@@ -57,7 +57,7 @@ class FairnessAwareRanker:
         
         # Extract resume data - handle both field name variants
         # Primary skills from BERT NER format
-        skills = resume_data.get("primary_skills", resume_data.get("skills", []))
+        skills = resume_data.get("skills", [])
         education = resume_data.get("education", [])
         
         # Handle certifications - check if it exists and is a dict

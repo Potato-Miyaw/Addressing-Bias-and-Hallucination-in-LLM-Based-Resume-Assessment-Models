@@ -75,7 +75,26 @@ def render(api_base_url: str):
             if report.get('details'):
                 with st.expander("📋 Detailed Verification Results"):
                     for claim in report['details']:
-                        if claim['is_hallucination']:
-                            st.error(f"❌ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
-                        else:
-                            st.success(f"✅ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                        col1, col2 = st.columns([3, 1])
+                        
+                        with col1:
+                            if claim['is_hallucination']:
+                                st.error(f"❌ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                            else:
+                                st.success(f"✅ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                            
+                            # Show extraction vs ground truth
+                            st.markdown(f"**Extracted:** `{claim['extraction']}`")
+                            st.markdown(f"**Ground Truth:** `{claim['ground_truth']}`")
+                            
+                            # Show evidence snippet if available
+                            if claim.get('evidence_snippet'):
+                                with st.expander("🔍 Evidence from Resume"):
+                                    st.code(claim['evidence_snippet'], language="text")
+                        
+                        with col2:
+                            # Show metrics
+                            st.metric("Token Overlap", f"{claim.get('token_overlap', 0):.2f}")
+                            st.metric("BERTScore", f"{claim.get('bertscore_f1', 0):.2f}")
+                        
+                        st.markdown("---")

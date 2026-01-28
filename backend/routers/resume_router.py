@@ -78,7 +78,6 @@ async def parse_resume(request: ResumeParseRequest):
             "email": resume_data.get("email_address", resume_data.get("email")),
             "phone": resume_data.get("phone"),
             "skills": resume_data.get("skills", []),
-            "primary_skills": resume_data.get("primary_skills", []),
             "experience": {
                 "years": resume_data.get("total_experience_(years)", 0),
                 "months": resume_data.get("total_experience_(months)", 0),
@@ -124,8 +123,7 @@ async def parse_resume_v2(request: ResumeParseRequest):
             "name": resume_data.get("name", "Unknown"),
             "email": resume_data.get("email_address", "unknown@email.com"),
             "phone": resume_data.get("contact_number", [""])[0] if resume_data.get("contact_number") else "",
-            "skills": resume_data.get("primary_skills", []) + resume_data.get("secondary_skills", []),
-            "primary_skills": resume_data.get("primary_skills", []),
+            "skills": resume_data.get("skills", []),
             "experience": {
                 "years": resume_data.get("total_experience_(months)", 0) // 12,
                 "months": resume_data.get("total_experience_(months)", 0),
@@ -148,16 +146,26 @@ async def parse_resume_v2(request: ResumeParseRequest):
         )
 
 @router.post("/parse-hybrid")
-async def parse_resume_hybrid(request: ResumeParseRequest):
+async def parse_resume_hybrid(file: UploadFile = File(...), candidate_name: Optional[str] = None):
     """
     HYBRID Resume Parsing - Best of Both Worlds!
     Combines Generic BERT NER (good at names) + Resume-Specific NER (good at skills)
+    Accepts file upload (PDF, DOCX, DOC, TXT)
     """
     try:
-        extractor = get_hybrid_extractor()
-        resume_data = extractor.parse_resume(request.resume_text)
+        # Read file content
+        content = await file.read()
         
-        resume_id = hashlib.md5(request.resume_text.encode()).hexdigest()[:12]
+        # Extract text based on file type
+        resume_text = extract_text_from_file(content, file.filename)
+        
+        if not resume_text or not resume_text.strip():
+            raise HTTPException(400, "No text could be extracted from the file")
+        
+        extractor = get_hybrid_extractor()
+        resume_data = extractor.parse_resume(resume_text)
+        
+        resume_id = hashlib.md5(resume_text.encode()).hexdigest()[:12]
         
         if resume_data.get("extraction_status") == "FAILED":
             raise HTTPException(
@@ -165,18 +173,20 @@ async def parse_resume_hybrid(request: ResumeParseRequest):
                 detail=resume_data.get("error", "Hybrid resume parsing failed")
             )
         
-        if request.candidate_name:
-            resume_data["candidate_name"] = request.candidate_name
+        if candidate_name:
+            resume_data["candidate_name"] = candidate_name
         
         return {
             "success": True,
             "resume_id": resume_id,
+            "filename": file.filename,
+            "file_type": file.filename.split('.')[-1].upper() if '.' in file.filename else "UNKNOWN",
+            "text": resume_text,
+            "text_length": len(resume_text),
             "name": resume_data.get("name", "Unknown"),
             "email": resume_data.get("email_address", "unknown@email.com"),
             "phone": resume_data.get("contact_number", [""])[0] if resume_data.get("contact_number") else "",
-            "skills": resume_data.get("primary_skills", []) + resume_data.get("secondary_skills", []),
-            "primary_skills": resume_data.get("primary_skills", []),
-            "secondary_skills": resume_data.get("secondary_skills", []),
+            "skills": resume_data.get("skills", []),
             "experience": {
                 "years": resume_data.get("total_experience_(months)", 0) // 12,
                 "months": resume_data.get("total_experience_(months)", 0),

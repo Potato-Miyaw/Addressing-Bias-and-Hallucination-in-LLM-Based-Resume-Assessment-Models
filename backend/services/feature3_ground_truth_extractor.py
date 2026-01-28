@@ -15,6 +15,33 @@ class GroundTruthExtractor:
         """Initialize ground truth extractor"""
         pass
     
+    def extract_context_snippet(self, text: str, value: str, context_chars: int = 100) -> str:
+        """Extract a snippet of text around the found value for evidence"""
+        if not value or not text:
+            return ""
+        
+        text_lower = text.lower()
+        value_lower = str(value).lower()
+        
+        # Find the position of the value
+        pos = text_lower.find(value_lower)
+        if pos == -1:
+            return ""
+        
+        # Extract context before and after
+        start = max(0, pos - context_chars)
+        end = min(len(text), pos + len(value) + context_chars)
+        
+        snippet = text[start:end]
+        
+        # Add ellipsis if truncated
+        if start > 0:
+            snippet = "..." + snippet
+        if end < len(text):
+            snippet = snippet + "..."
+        
+        return snippet.strip()
+    
     def extract_ground_truth_from_text(self, resume_text: str, resume_extractions: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract ground truth values from raw resume text
@@ -30,6 +57,7 @@ class GroundTruthExtractor:
             dict: Ground truth data extracted from raw text
         """
         ground_truth = {}
+        evidence_snippets = {}  # Store evidence snippets for each field
         
         # Normalize text for searching
         text_lower = resume_text.lower()
@@ -42,6 +70,7 @@ class GroundTruthExtractor:
                 name_lower = extracted_name.lower()
                 if name_lower in text_lower[:500]:  # Name should be in first 500 chars
                     ground_truth['name'] = extracted_name
+                    evidence_snippets['name'] = self.extract_context_snippet(resume_text, extracted_name, 80)
                 else:
                     # Try to find the actual name in first few lines
                     lines = resume_text.split('\n')[:5]
@@ -57,33 +86,73 @@ class GroundTruthExtractor:
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         email_match = re.search(email_pattern, resume_text)
         if email_match:
-            ground_truth['email_address'] = email_match.group(0)
+            email_value = email_match.group(0)
+            ground_truth['email_address'] = email_value
+            ground_truth['email'] = email_value  # Fallback field name for compatibility
+            evidence_snippets['email'] = self.extract_context_snippet(resume_text, email_value, 60)
+            evidence_snippets['email_address'] = evidence_snippets['email']
+            logger.info(f"✅ Extracted EMAIL: {email_value}")
+        else:
+            logger.warning(f"⚠️ No email found in resume text")
         
         # 3. PHONE - Extract from text
         phone_patterns = [
-            r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
-            r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',
-            r'\(\d{3}\)\s*\d{3}[-.\s]?\d{4}',
+            r'\+\d{1,3}\s*\d{1,2}\s*\d{2}\s*\d{2}\s*\d{2}\s*\d{2}',  # International with spaces: +33 07 45 51 36 70
+            r'\+?\d{1,3}[-\.\s]?\(?\d{3}\)?[-\.\s]?\d{3}[-\.\s]?\d{4}',  # US/Standard format
+            r'\d{3}[-\.\s]?\d{3}[-\.\s]?\d{4}',  # 10-digit US
+            r'\(\d{3}\)\s*\d{3}[-\.\s]?\d{4}',  # (123) 456-7890
+            r'\d{2}[\s\.]\d{2}[\s\.]\d{2}[\s\.]\d{2}[\s\.]\d{2}',  # French format: 07 45 51 36 70
         ]
         
         for pattern in phone_patterns:
             phone_match = re.search(pattern, resume_text)
             if phone_match:
-                ground_truth['contact_number'] = [phone_match.group(0)]
+                phone_value = phone_match.group(0)
+                ground_truth['contact_number'] = [phone_value]
+                ground_truth['phone'] = phone_value  # Fallback field name for compatibility
+                evidence_snippets['phone'] = self.extract_context_snippet(resume_text, phone_value, 60)
+                evidence_snippets['contact_number'] = evidence_snippets['phone']
+                logger.info(f"✅ Extracted PHONE: {phone_value}")
                 break
+        else:
+            logger.warning(f"⚠️ No phone number found in resume text")
         
         # 4. SKILLS - Check if extracted skills actually appear in text
-        if 'primary_skills' in resume_extractions:
+        if 'skills' in resume_extractions:
             verified_skills = []
-            extracted_skills = resume_extractions.get('primary_skills', []) + resume_extractions.get('secondary_skills', [])
+            extracted_skills = resume_extractions.get('skills', [])
             
             for skill in extracted_skills:
-                skill_lower = skill.lower()
+                if not skill:
+                    continue
+                skill_lower = str(skill).lower()
                 # Check if skill appears in text (case-insensitive)
-                if skill_lower in text_lower:
+                # Also check common variations (e.g., "python" matches "Python3", "python2")
+                skill_base = skill_lower.split()[0] if ' ' in skill_lower else skill_lower
+                if skill_lower in text_lower or skill_base in text_lower:
                     verified_skills.append(skill)
             
-            ground_truth['primary_skills'] = verified_skills
+            if verified_skills:
+                # Split verified skills back into primary and secondary
+                ground_truth['skills'] = verified_skills if verified_skills else []
+        
+        # Also check for "skills" field (single field for all skills)
+        if 'skills' in resume_extractions:
+            verified_skills = []
+            extracted_skills = resume_extractions.get('skills', [])
+            if isinstance(extracted_skills, str):
+                extracted_skills = [extracted_skills]
+            
+            for skill in extracted_skills:
+                if not skill:
+                    continue
+                skill_lower = str(skill).lower()
+                skill_base = skill_lower.split()[0] if ' ' in skill_lower else skill_lower
+                if skill_lower in text_lower or skill_base in text_lower:
+                    verified_skills.append(skill)
+            
+            if verified_skills:
+                ground_truth['skills'] = verified_skills
         
         # 5. EDUCATION - Check if extracted education appears in text
         if 'education' in resume_extractions:
@@ -98,38 +167,72 @@ class GroundTruthExtractor:
             
             ground_truth['education'] = verified_education
         
-        # 6. EXPERIENCE - Extract years from text
+        # 6. EXPERIENCE - Extract years and companies from text
         years_patterns = [
             r'(\d+)\+?\s*years?\s+(?:of\s+)?experience',
             r'experience:?\s*(\d+)\+?\s*years?',
             r'(\d+)\+?\s*years?\s+(?:in|as|working)',
+            r'having\s+(\d+)\s+years',
+            r'total\s+(?:of\s+)?(\d+)\s+years',
         ]
         
+        extracted_years = None
+        years_evidence = None
         for pattern in years_patterns:
             match = re.search(pattern, text_lower)
             if match:
-                years = int(match.group(1))
-                ground_truth['total_experience_(months)'] = years * 12
+                extracted_years = int(match.group(1))
+                years_evidence = self.extract_context_snippet(resume_text, match.group(0), 80)
+                ground_truth['total_experience_(months)'] = extracted_years * 12
+                logger.info(f"✅ Extracted EXPERIENCE: {extracted_years} years")
                 break
         
         # 7. COMPANIES - Extract company names mentioned in text
         # Look for common job-related patterns
         company_patterns = [
-            r'(?:at|@)\s+([A-Z][A-Za-z\s&\.]+?)(?:\s+\(|\s+-|\s+•|\n)',
+            r'(?:at|@|with)\s+([A-Z][A-Z\s&\.]+(?:PRIVATE\s+LIMITED|LIMITED|LTD|LLC|INC|CORP|PVT|SOLUTIONS)?)',
+            r'(?:working|worked)\s+(?:at|with|for)\s+([A-Z][A-Za-z\s&\.]+(?:PRIVATE\s+LIMITED|LIMITED|LTD|LLC|INC)?)',
             r'(?:Company|Employer|Organization)\s*:\s*([A-Z][A-Za-z\s&\.]+)',
+            r'([A-Z][A-Z\s]+(?:PRIVATE\s+LIMITED|LIMITED|SOLUTIONS|TECHNOLOGIES))',
         ]
         
         companies = []
         for pattern in company_patterns:
-            matches = re.findall(pattern, resume_text)
+            matches = re.findall(pattern, resume_text, re.IGNORECASE)
             for match in matches:
                 company = match.strip()
-                if 3 < len(company) < 50:  # Reasonable company name length
+                # Filter out common false positives
+                if 5 < len(company) < 80 and company not in ['EXPERIENCE', 'EDUCATION', 'PROFESSIONAL SUMMARY']:
+                    # Clean up the company name
+                    company = ' '.join(company.split())  # Normalize spaces
                     companies.append(company)
         
-        if companies:
-            ground_truth['current_company_name'] = companies[0]
-            ground_truth['companies_worked_at'] = list(set(companies))[:5]
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_companies = []
+        for company in companies:
+            company_normalized = company.upper()
+            if company_normalized not in seen:
+                seen.add(company_normalized)
+                unique_companies.append(company)
+        
+        if unique_companies:
+            ground_truth['current_company_name'] = unique_companies[0]
+            ground_truth['companies_worked_at'] = unique_companies[:5]
+            logger.info(f"✅ Extracted COMPANIES: {unique_companies}")
+        
+        # Build experience object if we have data
+        if extracted_years or unique_companies:
+            experience_data = []
+            if unique_companies:
+                experience_data.extend(unique_companies)
+            if extracted_years:
+                experience_data.append(f"{extracted_years} years")
+            
+            ground_truth['experience'] = experience_data
+            if years_evidence:
+                evidence_snippets['experience'] = years_evidence
+            logger.info(f"✅ Built EXPERIENCE ground truth: {experience_data}")
         
         # 8. LOCATION - Extract location
         location_patterns = [
@@ -179,6 +282,9 @@ class GroundTruthExtractor:
             ground_truth['designation'] = list(set(titles))[:3]
         
         logger.info(f"Extracted ground truth: {len(ground_truth)} fields verified from text")
+        
+        # Add evidence snippets to the ground truth dict
+        ground_truth['_evidence_snippets'] = evidence_snippets
         
         return ground_truth
     
