@@ -60,14 +60,28 @@ class ResumeNERExtractor:
         
         # Phone
         phone_patterns = [
-            r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}',
-            r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}',
-            r'\d{10}',
+            r'\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', # +1-123-456-7890 or 123-456-7890
+            r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b',   # 123-456-7890
+            r'\b\d{5}[-.\s]?\d{5}\b',               # 98765-43210
+            r'\+?\d{1,4}[-.\s]?\d{3,5}[-.\s]?\d{3,5}', # Generic international +91 98765 43210
+            r'\b\d{10,12}\b',                       # Contiguous 10-12 digits
+            r'\+\d{1,3}(?:[-.\s]\d{2,4}){2,5}',     # International with multiple groups: +33 745 523 757
+            r'(?:Mobile|Phone|Cell|Ph|Tel)[:\s]*([+\d\(\)\-\s]{10,20})' # Look for labels
         ]
         
         for pattern in phone_patterns:
-            matches = re.findall(pattern, text)
-            contact["phone"].extend([m.strip() for m in matches])
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            # Clean matches
+            for m in matches:
+                # If match is tuple (from capturing group), take first non-empty
+                if isinstance(m, tuple):
+                    m = next((x for x in m if x), "")
+                
+                # Check cleanliness
+                clean_num = re.sub(r'[^\d+]', '', m)
+                if len(clean_num) >= 10:
+                     contact["phone"].append(m.strip())
+
         
         contact["phone"] = list(dict.fromkeys(contact["phone"]))[:3]
         
