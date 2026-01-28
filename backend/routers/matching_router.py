@@ -65,7 +65,7 @@ async def match_resume_to_job(request: MatchRequest):
         needs_extraction = (
             'text' in resume_data and 
             'skills' not in resume_data and 
-            'primary_skills' not in resume_data
+            'skills' not in resume_data
         )
         
         if needs_extraction:
@@ -108,7 +108,7 @@ async def batch_match_resumes(
             resume_data = resume["resume_data"]
             
             # Check if NER extraction needed
-            if 'text' in resume_data and 'skills' not in resume_data and 'primary_skills' not in resume_data:
+            if 'text' in resume_data and 'skills' not in resume_data:
                 resume_data = extractor.parse_resume(resume_data['text'])
             
             match_result = matcher.match_resume_to_job(resume_data, jd_data)

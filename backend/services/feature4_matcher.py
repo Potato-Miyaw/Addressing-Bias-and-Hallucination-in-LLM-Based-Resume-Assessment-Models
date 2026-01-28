@@ -64,12 +64,9 @@ class JobResumeMatcher:
             jd_data = {"required_skills": [], "required_experience": 0, "required_education": ""}
         
         # Extract resume fields (handle both formats)
-        if 'primary_skills' in resume_data:
-            # New comprehensive format - COMBINE primary + secondary
-            resume_skills = set(
-                resume_data.get('primary_skills', []) + 
-                resume_data.get('secondary_skills', [])
-            )
+        if 'skills' in resume_data:
+            # Get all skills
+            resume_skills = set(resume_data.get('skills', []))
             resume_exp_months = resume_data.get('total_experience_(months)', 0)
             resume_exp_years = resume_exp_months / 12
             resume_education = resume_data.get('education', [])

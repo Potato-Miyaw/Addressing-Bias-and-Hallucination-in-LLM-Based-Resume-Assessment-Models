@@ -74,12 +74,11 @@ class HybridResumeNERExtractor:
             combined['contact_number'] = list(set(phones_generic + phones_resume))[:3]
             
             # SKILLS: COMBINE BOTH (more is better!)
-            skills_generic = set(result_generic.get('primary_skills', []))
-            skills_resume = set(result_resume.get('primary_skills', []))
+            skills_generic = set(result_generic.get('skills', []))
+            skills_resume = set(result_resume.get('skills', []))
             all_skills = sorted(list(skills_generic | skills_resume))
             
-            combined['primary_skills'] = all_skills[:20] if all_skills else []
-            combined['secondary_skills'] = all_skills[20:40] if len(all_skills) > 20 else []
+            combined['skills'] = all_skills if all_skills else []
             
             logger.info(f"Skills: Generic={len(skills_generic)}, Resume={len(skills_resume)} → Combined: {len(all_skills)}")
             
@@ -185,8 +184,7 @@ class HybridResumeNERExtractor:
             "education": [],
             "current_company_name": "Unknown",
             "current_location": "Unknown",
-            "primary_skills": [],
-            "secondary_skills": [],
+            "skills": [],
             "total_experience_(months)": 0,
             "relevant_experience_(primary)": {"job_history": []},
             "relevant_experience_(secondary)": {"projects": [], "certifications": []},
