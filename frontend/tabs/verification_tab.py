@@ -87,10 +87,10 @@ def render(api_base_url: str):
                             st.markdown(f"**Extracted:** `{claim['extraction']}`")
                             st.markdown(f"**Ground Truth:** `{claim['ground_truth']}`")
                             
-                            # Show evidence snippet if available
+                            # Show evidence snippet if available (no nested expanders)
                             if claim.get('evidence_snippet'):
-                                with st.expander("🔍 Evidence from Resume"):
-                                    st.code(claim['evidence_snippet'], language="text")
+                                st.markdown("**Evidence from Resume:**")
+                                st.code(claim['evidence_snippet'], language="text")
                         
                         with col2:
                             # Show metrics

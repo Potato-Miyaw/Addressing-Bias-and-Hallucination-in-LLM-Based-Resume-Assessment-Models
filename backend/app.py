@@ -6,14 +6,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from repo root
+load_dotenv(Path(project_root) / ".env")
 
 # Import routers
 from backend.routers import (

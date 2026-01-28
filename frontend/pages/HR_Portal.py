@@ -54,7 +54,7 @@ if 'bias_results' not in st.session_state:
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", use_container_width=True)
+    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", use_column_width=True)
     st.markdown("### 💼 LLM Hiring System")
     st.markdown("**Features:**")
     st.markdown("- 📄 Job Description Analysis")
