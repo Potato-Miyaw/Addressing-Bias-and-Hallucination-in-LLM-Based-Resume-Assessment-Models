@@ -4,7 +4,7 @@ Complete Pipeline Router
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import sys
 import os
 
@@ -25,6 +25,9 @@ class CompletePipelineRequest(BaseModel):
     jd_text: str
     resume_texts: List[str]
     use_fairness: bool = False
+    fairness_method: Optional[str] = None
+    sensitive_attribute: Optional[str] = "gender"
+    hire_threshold: Optional[float] = 0.5
 
 @router.post("/complete")
 async def complete_pipeline(request: CompletePipelineRequest):
@@ -91,19 +94,24 @@ async def complete_pipeline(request: CompletePipelineRequest):
                 continue
         
         # Step 5: Rank candidates
-        ranked = ranker.rank_candidates(
+        result = ranker.rank_candidates_with_metrics(
             candidates,
             jd_data,
-            use_fairness=request.use_fairness
+            use_fairness=request.use_fairness,
+            fairness_method=request.fairness_method,
+            sensitive_attribute=request.sensitive_attribute or "gender",
+            hire_threshold=request.hire_threshold if request.hire_threshold is not None else 0.5,
         )
-        
+
         return {
             "success": True,
             "job_id": job_id,
             "jd_data": jd_data,
             "total_candidates": len(request.resume_texts),
-            "ranked_candidates": ranked,
-            "fairness_enabled": request.use_fairness
+            "ranked_candidates": result["ranked_candidates"],
+            "fairness_metrics": result["fairness_metrics"],
+            "fairness_enabled": request.use_fairness,
+            "fairness_method": request.fairness_method,
         }
     except Exception as e:
         raise HTTPException(
