@@ -6,13 +6,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
+from dotenv import load_dotenv
 
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
+# Load environment variables
+load_dotenv()
+
 # Import routers
-from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router
+from backend.routers import jd_router, resume_router, verification_router, matching_router, ranking_router, pipeline_router, notification_router
 
 # Initialize FastAPI
 app = FastAPI(
@@ -37,6 +41,7 @@ app.include_router(verification_router.router)
 app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
+app.include_router(notification_router.router)
 
 # Health check
 @app.get("/")
