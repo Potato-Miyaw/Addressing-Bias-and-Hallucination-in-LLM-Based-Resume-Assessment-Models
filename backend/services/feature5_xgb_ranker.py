@@ -195,6 +195,7 @@ class FairnessAwareRanker:
         X = np.array([[f[name] for name in feature_names] for f in features_list]) if features_list else np.array([])
         return X, feature_names, features_list
 
+
     def train_baseline_xgboost(self, X_train, y_train):
         """Train baseline XGBoost with GridSearchCV."""
         param_grid = {

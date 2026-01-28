@@ -328,8 +328,7 @@ class ResumeNERExtractor:
                 "name": name,
                 "email_address": contact_info.get("email", "unknown@email.com"),
                 "contact_number": contact_info["phone"],
-                "primary_skills": skills,
-                "secondary_skills": [],
+                "skills": skills,
                 "education": [e["degree"] for e in education] if education else [],
                 "total_experience_(months)": experience.get("years", 0) * 12,
                 "current_company_name": experience.get("companies", [])[0] if experience.get("companies") else "Unknown",
@@ -383,8 +382,7 @@ class ResumeNERExtractor:
             "education": [],
             "current_company_name": "Unknown",
             "current_location": "Unknown",
-            "primary_skills": [],
-            "secondary_skills": [],
+            "skills": [],
             "total_experience_(months)": 0,
             "relevant_experience_(primary)": {"job_history": []},
             "relevant_experience_(secondary)": {"projects": [], "certifications": []},
@@ -412,22 +410,13 @@ class ResumeNERExtractor:
         entity_table = []
         
         # Skills
-        primary_skills = resume_data.get("primary_skills", [])
-        if isinstance(primary_skills, list):
-            for skill in primary_skills:
+        skills = resume_data.get("skills", [])
+        if isinstance(skills, list):
+            for skill in skills:
                 entity_table.append({
-                    "Category": "🛠️ Skill (Primary)",
+                    "Category": "🛠️ Skill",
                     "Value": str(skill),
                     "Confidence": "High"
-                })
-        
-        secondary_skills = resume_data.get("secondary_skills", [])
-        if isinstance(secondary_skills, list):
-            for skill in secondary_skills:
-                entity_table.append({
-                    "Category": "🛠️ Skill (Secondary)",
-                    "Value": str(skill),
-                    "Confidence": "Medium"
                 })
         
         # Education
@@ -521,7 +510,7 @@ class ResumeNERExtractor:
         entities_to_highlight = []
         
         # Collect all entities with their types
-        for skill in resume_data.get("primary_skills", []):
+        for skill in resume_data.get("skills", []):
             entities_to_highlight.append((str(skill), "Skill"))
         
         for edu in resume_data.get("education", []):
@@ -580,8 +569,7 @@ class ResumeNERExtractor:
         if not isinstance(resume_data, dict):
             return {}
         
-        primary_skills = resume_data.get("primary_skills", [])
-        secondary_skills = resume_data.get("secondary_skills", [])
+        skills = resume_data.get("skills", [])
         education = resume_data.get("education", [])
         designation = resume_data.get("designation", [])
         
@@ -592,10 +580,7 @@ class ResumeNERExtractor:
         
         summary = {
             "total_entities_extracted": 0,
-            "skills_count": {
-                "primary": len(primary_skills) if isinstance(primary_skills, list) else 0,
-                "secondary": len(secondary_skills) if isinstance(secondary_skills, list) else 0
-            },
+            "skills_count": len(skills) if isinstance(skills, list) else 0,
             "education_count": len(education) if isinstance(education, list) else 0,
             "job_titles_count": len(designation) if isinstance(designation, list) else 0,
             "certifications_count": len(certifications) if isinstance(certifications, list) else 0,
@@ -606,8 +591,7 @@ class ResumeNERExtractor:
         
         # Calculate total
         summary["total_entities_extracted"] = (
-            summary["skills_count"]["primary"] +
-            summary["skills_count"]["secondary"] +
+            summary["skills_count"] +
             summary["education_count"] +
             summary["job_titles_count"] +
             summary["certifications_count"] +

@@ -16,6 +16,9 @@ import logging
 # Suppress BERTScore logging
 logging.getLogger('bert_score').setLevel(logging.CRITICAL)
 
+# Create logger for this module
+logger = logging.getLogger(__name__)
+
 class ClaimVerifier:
     def __init__(self, model_path: str = "/home/claude/models_saved/hallucination_lr.pkl"):
         """
@@ -210,18 +213,80 @@ class ClaimVerifier:
         verified_claims = []
         flagged_claims = []
         
+        # Extract evidence snippets if available
+        evidence_snippets = ground_truth_data.get('_evidence_snippets', {})
+        
+        # ONLY verify actual extracted entities, skip metadata fields
+        metadata_fields = {
+            'resume_id', 'file_type', 'text_length', 'status', 'message', 
+            'saved_to_db', 'text', '_id', 'filename', 'raw_text', 'timestamp',
+            'created_at', 'updated_at', 'id', '_evidence_snippets', 'success',
+            'model_type', 'entities', 'extraction_status', 'error'
+        }
+        
+        def is_empty_value(value):
+            """Check if a value is empty/null/meaningless"""
+            if value is None:
+                return True
+            if isinstance(value, str) and not value.strip():
+                return True
+            if isinstance(value, (list, tuple, set)) and len(value) == 0:
+                return True
+            if isinstance(value, dict) and len(value) == 0:
+                return True
+            return False
+        
+        def extract_verifiable_values(field_name, value):
+            """Extract actual values from nested objects for verification"""
+            if field_name == 'experience' and isinstance(value, dict):
+                # For experience, extract companies and years
+                verifiable = []
+                if value.get('companies'):
+                    verifiable.extend([c for c in value['companies'] if c and c != 'Unknown'])
+                if value.get('years', 0) > 0:
+                    verifiable.append(f"{value['years']} years")
+                return verifiable if verifiable else None
+            return value
+        
         # Verify each field
         for field, extraction in resume_extractions.items():
-            if field in ['_id', 'filename', 'raw_text']:
+            # Skip metadata fields
+            if field in metadata_fields:
+                logger.debug(f"⏭️ Skipping metadata field: {field}")
+                continue
+            
+            # Skip empty/null fields
+            if is_empty_value(extraction):
+                logger.debug(f"⏭️ Skipping empty field: {field}")
                 continue
             
             if not ground_truth_data:
                 continue
             
+            # Extract verifiable values from nested objects
+            extraction_to_verify = extract_verifiable_values(field, extraction)
+            if extraction_to_verify is None or is_empty_value(extraction_to_verify):
+                logger.debug(f"⏭️ Skipping field with no verifiable data: {field}")
+                continue
+            
             ground_truth = ground_truth_data.get(field, "")
             
-            result = self.verify_claim(extraction, ground_truth)
+            # Log what we're comparing
+            logger.info(f"\n🔍 Verifying field: {field}")
+            logger.info(f"   📤 Extraction: {extraction_to_verify}")
+            logger.info(f"   📥 Ground Truth: {ground_truth}")
+            
+            if not ground_truth or is_empty_value(ground_truth):
+                logger.warning(f"   ⚠️ No ground truth found for field '{field}' - marking as hallucination")
+            
+            result = self.verify_claim(extraction_to_verify, ground_truth)
             result['field'] = field
+            
+            # Add evidence snippet if available
+            if field in evidence_snippets:
+                result['evidence_snippet'] = evidence_snippets[field]
+            
+            logger.info(f"   {'✅' if not result['is_hallucination'] else '❌'} Result: {result['verdict']} (confidence: {result['confidence']:.2f})")
             
             verified_claims.append(result)
             
