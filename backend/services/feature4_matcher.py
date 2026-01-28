@@ -55,16 +55,21 @@ class JobResumeMatcher:
         return resume_level / required_level if required_level > 0 else 0.5
     
     def match_resume_to_job(self, resume_data: Dict[str, Any], jd_data: Dict[str, Any]) -> Dict[str, float]:
-        """
-        Match resume to job description
-        Handles both formats:
-        - Old format: {skills: [], education: [], experience: {}}
-        - New format: {primary_skills: [], secondary_skills: [], education: [], total_experience_(months): 72}
-        """
+        """Match resume to job description"""
+        
+        # Ensure inputs are dicts
+        if not isinstance(resume_data, dict):
+            resume_data = {}
+        if not isinstance(jd_data, dict):
+            jd_data = {"required_skills": [], "required_experience": 0, "required_education": ""}
+        
         # Extract resume fields (handle both formats)
         if 'primary_skills' in resume_data:
-            # New comprehensive format
-            resume_skills = set(resume_data.get('primary_skills', []) + resume_data.get('secondary_skills', []))
+            # New comprehensive format - COMBINE primary + secondary
+            resume_skills = set(
+                resume_data.get('primary_skills', []) + 
+                resume_data.get('secondary_skills', [])
+            )
             resume_exp_months = resume_data.get('total_experience_(months)', 0)
             resume_exp_years = resume_exp_months / 12
             resume_education = resume_data.get('education', [])
@@ -80,11 +85,10 @@ class JobResumeMatcher:
         required_exp = jd_data.get('required_experience', 0)
         required_edu = jd_data.get('required_education', '')
         
-        # Skill Match (Jaccard similarity)
+        # Skill Match (Jaccard similarity) - CASE INSENSITIVE
         if required_skills:
-            # Case-insensitive matching
-            resume_skills_lower = {s.lower() for s in resume_skills}
-            required_skills_lower = {s.lower() for s in required_skills}
+            resume_skills_lower = {s.lower().strip() for s in resume_skills}
+            required_skills_lower = {s.lower().strip() for s in required_skills}
             
             matched = resume_skills_lower.intersection(required_skills_lower)
             union = resume_skills_lower.union(required_skills_lower)

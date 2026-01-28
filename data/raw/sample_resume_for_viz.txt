@@ -1,0 +1,65 @@
+JOHN DOE
+Senior Software Engineer
+
+Email: john.doe@email.com
+Phone: (555) 123-4567
+Location: San Francisco, CA
+
+PROFESSIONAL SUMMARY
+Experienced software engineer with 8+ years of experience building scalable web applications and cloud infrastructure. Expert in Python, JavaScript, and AWS.
+
+TECHNICAL SKILLS
+Languages: Python, JavaScript, TypeScript, Java, SQL
+Frameworks: React, Django, FastAPI, Flask, Node.js, Express
+Cloud: AWS, Docker, Kubernetes, Terraform
+Databases: PostgreSQL, MongoDB, Redis, MySQL
+Tools: Git, Jenkins, GitHub Actions, Jira
+
+PROFESSIONAL EXPERIENCE
+
+Senior Software Engineer at Tech Innovations Inc
+San Francisco, CA | June 2020 - Present
+- Built and deployed 15+ microservices using FastAPI and Docker on AWS EKS
+- Reduced API response time by 40% through database optimization and caching with Redis
+- Led a team of 5 engineers in developing a real-time analytics dashboard using React and WebSocket
+- Implemented CI/CD pipeline using GitHub Actions and reduced deployment time by 60%
+
+Software Engineer at StartupXYZ
+Palo Alto, CA | January 2018 - May 2020
+- Developed RESTful APIs using Django and PostgreSQL serving 100K+ daily active users
+- Built responsive frontend applications using React and TypeScript
+- Collaborated with product team to design and implement new features
+- Wrote comprehensive unit tests achieving 85% code coverage
+
+Junior Developer at WebSolutions Co
+San Jose, CA | July 2016 - December 2017
+- Developed and maintained company website using JavaScript and Node.js
+- Created automated scripts using Python for data processing
+- Participated in code reviews and agile development processes
+
+EDUCATION
+
+Master of Science in Computer Science
+Stanford University, Stanford, CA
+Graduated: 2016
+GPA: 3.8/4.0
+
+Bachelor of Science in Computer Science
+University of California, Berkeley
+Graduated: 2014
+GPA: 3.6/4.0
+
+CERTIFICATIONS
+- AWS Certified Solutions Architect - Associate (2021)
+- Google Cloud Professional Cloud Architect (2020)
+- MongoDB Certified Developer (2019)
+
+PROJECTS
+- Built an open-source Python library for data validation with 2K+ GitHub stars
+- Developed a machine learning model for sentiment analysis using PyTorch
+- Created a task management app using React Native with 10K+ downloads
+
+ACHIEVEMENTS
+- Employee of the Year 2022 at Tech Innovations Inc
+- Presented at PyCon 2021 on "Building Scalable APIs with FastAPI"
+- Contributed to Django open-source project (3 merged PRs)

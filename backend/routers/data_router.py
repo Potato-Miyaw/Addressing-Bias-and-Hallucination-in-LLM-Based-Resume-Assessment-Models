@@ -1,5 +1,5 @@
 """
-Database module - MongoDB integration removed
+Data Query Router - MongoDB integration removed
 All data operations are now in-memory only
 """
 

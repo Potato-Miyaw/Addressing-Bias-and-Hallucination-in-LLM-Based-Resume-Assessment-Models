@@ -199,7 +199,12 @@ class ClaimVerifier:
         Returns:
             dict: Complete verification report
         """
+        # Ensure inputs are dicts
+        if not isinstance(resume_extractions, dict):
+            resume_extractions = {}
         if ground_truth_data is None:
+            ground_truth_data = {}
+        elif not isinstance(ground_truth_data, dict):
             ground_truth_data = {}
         
         verified_claims = []
