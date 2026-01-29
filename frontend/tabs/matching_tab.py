@@ -9,15 +9,92 @@ def render(api_base_url: str):
     """Render the Matching & Ranking tab"""
     st.header("🎯 Job-Resume Matching & Ranking")
     
-    if not st.session_state.jd_data:
-        st.warning("⚠️ Please analyze a job description first (Tab 1)")
-    elif not st.session_state.resumes_data:
+    # Job Selection Section
+    st.subheader("1️⃣ Select Job Description")
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        # Option to use existing job or current session job
+        job_source = st.radio(
+            "Job Description Source:",
+            ["Use Current Session Job", "Select from Database"],
+            horizontal=True
+        )
+    
+    selected_job = None
+    
+    if job_source == "Use Current Session Job":
+        if not st.session_state.jd_data:
+            st.warning("⚠️ Please analyze a job description first (Tab 1)")
+            return
+        else:
+            selected_job = st.session_state.jd_data
+            st.info(f"📋 Using: **{selected_job.get('job_title', 'Current Job')}** (ID: `{selected_job['job_id'][:16]}...`)")
+    
+    else:  # Select from Database
+        try:
+            # Fetch jobs from database
+            jobs_response = requests.get(f"{api_base_url}/api/data/jobs?limit=100")
+            
+            if jobs_response.status_code == 200:
+                jobs_data = jobs_response.json()
+                jobs_list = jobs_data.get('jobs', [])
+                
+                if not jobs_list:
+                    st.warning("⚠️ No jobs found in database. Please add a job description first (Tab 1)")
+                    return
+                
+                # Create job options for selectbox
+                job_options = {
+                    f"{job['job_title']} - {job['job_id'][:16]}... ({len(job.get('required_skills', []))} skills)": job
+                    for job in jobs_list
+                }
+                
+                selected_job_key = st.selectbox(
+                    "Select Job Description:",
+                    options=list(job_options.keys()),
+                    key="job_selector"
+                )
+                
+                selected_job = job_options[selected_job_key]
+                
+                # Show job details in expander
+                with st.expander("📄 View Job Requirements"):
+                    st.write(f"**Job ID:** `{selected_job['job_id']}`")
+                    st.write(f"**Title:** {selected_job.get('job_title', 'N/A')}")
+                    st.write(f"**Experience Required:** {selected_job.get('required_experience', 0)} years")
+                    st.write(f"**Education:** {selected_job.get('required_education', 'N/A')}")
+                    
+                    st.write("**Required Skills:**")
+                    for skill in selected_job.get('required_skills', []):
+                        st.write(f"  • {skill}")
+                    
+                    if selected_job.get('certifications'):
+                        st.write("**Certifications:**")
+                        for cert in selected_job.get('certifications', []):
+                            st.write(f"  • {cert}")
+            else:
+                st.error("Failed to fetch jobs from database")
+                return
+        except Exception as e:
+            st.error(f"Error fetching jobs: {str(e)}")
+            return
+    
+    st.markdown("---")
+    st.subheader("2️⃣ Select Resumes and Match")
+    
+    if not st.session_state.resumes_data:
         st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
-    else:
+    elif selected_job:
         st.success("✅ Ready to match and rank candidates!")
         
         use_fairness = st.checkbox("Use Fairness-Aware Ranking", value=False,
                                    help="Apply fairness constraints using Fairlearn")
+        fairness_method = None
+        if use_fairness:
+            fairness_method = st.selectbox("Fairness Method", ["expgrad", "reweighing", "threshold"], index=0)
+
         
         if st.button("🚀 Match & Rank Candidates", type="primary"):
             with st.spinner("Processing candidates..."):
@@ -28,18 +105,13 @@ def render(api_base_url: str):
                     for resume in st.session_state.resumes_data:
                         resume_data = resume['data']
                         
-                        # Match to job (NER extraction happens inside matching router)
+                        # Match to job using the new endpoint with job_id
                         match_response = requests.post(
-                            f"{api_base_url}/api/match/",
+                            f"{api_base_url}/api/match/with-job-id",
                             json={
                                 "resume_id": resume_data.get('resume_id', 'unknown'),
-                                "job_id": st.session_state.jd_data['job_id'],
-                                "resume_data": resume_data,  # Pass full data (includes 'text' field)
-                                "jd_data": {
-                                    "required_skills": st.session_state.jd_data['required_skills'],
-                                    "required_experience": st.session_state.jd_data['required_experience'],
-                                    "required_education": st.session_state.jd_data['required_education']
-                                }
+                                "job_id": selected_job['job_id'],
+                                "resume_data": resume_data  # Pass full data (includes 'text' field)
                             }
                         )
                         
@@ -57,16 +129,25 @@ def render(api_base_url: str):
                     rank_response = requests.post(
                         f"{api_base_url}/api/rank/",
                         json={
-                            "job_id": st.session_state.jd_data['job_id'],
+                            "job_id": selected_job['job_id'],
                             "candidates": candidates,
-                            "jd_data": st.session_state.jd_data,
-                            "use_fairness": use_fairness
+                            "jd_data": {
+                                "required_skills": selected_job.get('required_skills', []),
+                                "required_experience": selected_job.get('required_experience', 0),
+                                "required_education": selected_job.get('required_education', '')
+                            },
+                            "use_fairness": use_fairness,
+                            "fairness_method": fairness_method
                         }
                     )
                     
                     if rank_response.status_code == 200:
                         ranked_results = rank_response.json()
                         st.session_state.ranked_candidates = ranked_results['ranked_candidates']
+                        st.session_state.rank_fairness_metrics = ranked_results.get('fairness_metrics')
+                        st.session_state.rank_job_id = ranked_results.get('job_id', selected_job['job_id'])
+                        st.session_state.rank_fairness_enabled = ranked_results.get('fairness_enabled', use_fairness)
+                        st.session_state.selected_job_for_ranking = selected_job  # Store for display
                         st.success("✅ Candidates ranked successfully!")
                         st.rerun()
                     
@@ -92,42 +173,84 @@ def render(api_base_url: str):
                 })
             
             df = pd.DataFrame(ranking_data)
-            st.dataframe(df, width='stretch', hide_index=True)
-            
-            # Visualization
-            st.subheader("📈 Candidate Comparison")
-            
-            fig = go.Figure()
-            
-            candidates_list = [c.get('candidate_name', c['resume_id'][:8]) 
-                             for c in st.session_state.ranked_candidates]
-            
-            fig.add_trace(go.Bar(
-                x=candidates_list,
-                y=[c['match_data']['match_score'] for c in st.session_state.ranked_candidates],
-                name='Overall Match',
-                marker_color='lightblue'
-            ))
-            
-            fig.add_trace(go.Bar(
-                x=candidates_list,
-                y=[c['match_data']['skill_match'] for c in st.session_state.ranked_candidates],
-                name='Skill Match',
-                marker_color='lightgreen'
-            ))
-            
-            fig.update_layout(
-                title="Candidate Match Scores",
-                xaxis_title="Candidate",
-                yaxis_title="Match Score (%)",
-                barmode='group',
-                height=400
-            )
-            
-            st.plotly_chart(fig, width='stretch')
-            
+            st.dataframe(df, hide_index=True)
+
+            # Fairness metrics summary
+            fairness_metrics = getattr(st.session_state, 'rank_fairness_metrics', None)
+            if isinstance(fairness_metrics, dict):
+                st.subheader("Fairness Metrics")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Impact Ratio", fairness_metrics.get("impact_ratio"))
+                col2.metric("DP Diff", fairness_metrics.get("demographic_parity"))
+                col3.metric("EO Diff", fairness_metrics.get("equal_opportunity"))
+
+            # Exports
+            st.subheader("Exports")
+            export_payload = {
+                "job_id": getattr(st.session_state, 'rank_job_id', 'JOB'),
+                "ranked_candidates": st.session_state.ranked_candidates,
+                "fairness_metrics": fairness_metrics or {},
+                "fairness_enabled": getattr(st.session_state, 'rank_fairness_enabled', False),
+                "hire_threshold": 0.5,
+            }
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Prepare Shortlist CSV"):
+                    try:
+                        csv_resp = requests.post(f"{api_base_url}/api/rank/export/shortlist", json=export_payload)
+                        if csv_resp.status_code == 200:
+                            st.session_state.shortlist_csv = csv_resp.content
+                            st.session_state.shortlist_csv_name = f"shortlist_{export_payload['job_id']}.csv"
+                        else:
+                            st.error(f"CSV export failed: {csv_resp.text}")
+                    except Exception as e:
+                        st.error(f"CSV export failed: {str(e)}")
+                if hasattr(st.session_state, 'shortlist_csv'):
+                    st.download_button(
+                        label="Download Shortlist CSV",
+                        data=st.session_state.shortlist_csv,
+                        file_name=getattr(st.session_state, 'shortlist_csv_name', 'shortlist.csv'),
+                        mime="text/csv",
+                    )
+
+            with col2:
+                if st.button("Prepare Audit PDF"):
+                    try:
+                        pdf_resp = requests.post(f"{api_base_url}/api/rank/export/audit", json=export_payload)
+                        if pdf_resp.status_code == 200:
+                            st.session_state.audit_pdf = pdf_resp.content
+                            st.session_state.audit_pdf_name = f"audit_{export_payload['job_id']}.pdf"
+                        else:
+                            st.error(f"Audit export failed: {pdf_resp.text}")
+                    except Exception as e:
+                        st.error(f"Audit export failed: {str(e)}")
+                if hasattr(st.session_state, 'audit_pdf'):
+                    st.download_button(
+                        label="Download Audit PDF",
+                        data=st.session_state.audit_pdf,
+                        file_name=getattr(st.session_state, 'audit_pdf_name', 'audit.pdf'),
+                        mime="application/pdf",
+                    )
+            # Send summary to Teams
+            st.subheader("Send Summary to Teams")
+            if st.button("Send to Teams"):
+                try:
+                    notify_payload = {
+                        "job_id": getattr(st.session_state, 'rank_job_id', 'JOB'),
+                        "ranked_candidates": st.session_state.ranked_candidates,
+                        "fairness_metrics": fairness_metrics or {},
+                    }
+                    notify_resp = requests.post(f"{api_base_url}/api/notify/power-automate", json=notify_payload)
+                    if notify_resp.status_code == 200:
+                        st.success("Teams notification sent")
+                    else:
+                        st.error(f"Teams notification failed: {notify_resp.text}")
+                except Exception as e:
+                    st.error(f"Teams notification failed: {str(e)}")
+
             # Detailed view
-            st.subheader("📋 Detailed Candidate Reports")
+            st.subheader("Detailed Candidate Reports")
             
             for candidate in st.session_state.ranked_candidates:
                 with st.expander(f"Rank #{candidate['rank']}: {candidate['resume_data'].get('name', candidate.get('candidate_name', candidate['resume_id'][:8]))}"):

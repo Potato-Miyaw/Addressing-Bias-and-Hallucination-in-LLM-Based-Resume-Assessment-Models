@@ -12,7 +12,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 # Import tab modules
-from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab
+from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab, multilang_tab
 
 
 
@@ -54,7 +54,7 @@ if 'bias_results' not in st.session_state:
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", use_container_width=True)
+    st.image("https://via.placeholder.com/200x100.png?text=DSA+9+MVP", width='stretch')
     st.markdown("### 💼 LLM Hiring System")
     st.markdown("**Features:**")
     st.markdown("- 📄 Job Description Analysis")
@@ -82,36 +82,51 @@ with st.sidebar:
 st.markdown('<div class="main-header">👨‍💼 HR Portal - Resume Screening System</div>', unsafe_allow_html=True)
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tabs = st.tabs([
     "📄 Job Description", 
     "📋 Resumes", 
+    "🌍 Multi-Language", # Moved here
     "🎯 Matching & Ranking",
     "✅ Verification",
     "🚀 Complete Pipeline",
     "🎓 HR Feedback",
-    "🔬 Multi-Model Bias Detection" #feature 6
+    "🔬 Multi-Model Bias Detection"
 ])
 
-with tab1:
+(
+    job_description_tab_ui, 
+    resumes_tab_ui, 
+    multilang_tab_ui, 
+    matching_tab_ui, 
+    verification_tab_ui, 
+    pipeline_tab_ui, 
+    feedback_tab_ui, 
+    bias_tab_ui
+) = tabs
+
+with job_description_tab_ui:
     job_description_tab.render(API_BASE_URL)
 
-with tab2:
-    resumes_tab.render(API_BASE_URL)
+with resumes_tab_ui:
+    resumes_tab.render(API_BASE_URL, portal_type="hr_upload")
 
-with tab3:
+with multilang_tab_ui:
+    multilang_tab.render(API_BASE_URL)
+
+with matching_tab_ui:
     matching_tab.render(API_BASE_URL)
 
-with tab4:
+with verification_tab_ui:
     verification_tab.render(API_BASE_URL)
 
-with tab5:
+with pipeline_tab_ui:
     pipeline_tab.render(API_BASE_URL)
 
-with tab6:
+with feedback_tab_ui:
     feedback_tab.render(API_BASE_URL)
 
-with tab7:
-    bias_tab.render(API_BASE_URL)  # Feature 6
+with bias_tab_ui:
+    bias_tab.render(API_BASE_URL)
     
 
 
