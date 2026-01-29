@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 def render(api_base_url: str):
-    st.header("🌍 Multi-Language Resume Support")
+    st.header("Multi-Language Resume Support")
     st.markdown("Translate and verify resumes that were uploaded in the **Resumes** tab.")
     
     # Check if resumes exist in session state
@@ -52,7 +52,7 @@ def render(api_base_url: str):
                                 st.text_area("English", data["english_text_preview"], height=200, key="eng_preview")
                             
                             st.markdown("---")
-                            st.subheader("📊 Extracted Information (From Translated Text)")
+                            st.subheader("Extracted Information (From Translated Text)")
                             
                             parsed = data["parsed_data"]
                             

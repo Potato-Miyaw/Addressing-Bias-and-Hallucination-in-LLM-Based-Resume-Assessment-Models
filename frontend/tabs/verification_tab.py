@@ -5,13 +5,12 @@ import requests
 
 def render(api_base_url: str):
     """Render the Verification tab"""
-    st.header("✅ Hallucination Detection")
+    st.header("Hallucination Detection")
     
     if not st.session_state.resumes_data:
-        st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
+        st.warning("Please upload and parse resumes first (Tab 2)")
     else:
         st.markdown("Verify resume claims for hallucinations using Token Overlap + BERTScore")
-        st.info("ℹ️ **NEW**: Ground truth is automatically extracted from the resume text itself - checking if LLM extractions actually appear in the original document!")
         
         selected_resume = st.selectbox(
             "Select Resume to Verify",
@@ -19,14 +18,14 @@ def render(api_base_url: str):
             format_func=lambda x: st.session_state.resumes_data[x]['filename']
         )
         
-        if st.button("🔍 Verify Resume", type="primary"):
+        if st.button("Verify Resume", type="primary"):
             with st.spinner("Verifying claims..."):
                 try:
                     resume_data = st.session_state.resumes_data[selected_resume]['data']
                     
                     # Make sure we have the full extracted data
                     if 'text' not in resume_data:
-                        st.error("❌ Resume text not available. Please re-upload the resume.")
+                        st.error("Resume text not available. Please re-upload the resume.")
                     else:
                         response = requests.post(
                             f"{api_base_url}/api/verify/resume",
@@ -50,7 +49,7 @@ def render(api_base_url: str):
             report = st.session_state.verification_report
             
             st.markdown("---")
-            st.subheader("📊 Verification Report")
+            st.subheader("Verification Report")
             
             col1, col2, col3, col4 = st.columns(4)
             
@@ -65,23 +64,23 @@ def render(api_base_url: str):
             
             # Verdict
             if report['verdict'] == "VERIFIED":
-                st.success("✅ All claims verified!")
+                st.success("All claims verified!")
             elif report['verdict'] == "NO_CLAIMS":
-                st.info("ℹ️ Ground truth auto-extracted from resume text")
+                st.info("Ground truth auto-extracted from resume text")
             else:
-                st.warning(f"⚠️ {report['verdict']}")
+                st.warning(f"{report['verdict']}")
             
             # Show details if available
             if report.get('details'):
-                with st.expander("📋 Detailed Verification Results"):
+                with st.expander("Detailed Verification Results"):
                     for claim in report['details']:
                         col1, col2 = st.columns([3, 1])
                         
                         with col1:
                             if claim['is_hallucination']:
-                                st.error(f"❌ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                                st.error(f"**{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
                             else:
-                                st.success(f"✅ **{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
+                                st.success(f"**{claim['field']}**: {claim['verdict']} (confidence: {claim['confidence']:.2f})")
                             
                             # Show extraction vs ground truth
                             st.markdown(f"**Extracted:** `{claim['extraction']}`")
@@ -89,7 +88,7 @@ def render(api_base_url: str):
                             
                             # Show evidence snippet if available
                             if claim.get('evidence_snippet'):
-                                with st.expander("🔍 Evidence from Resume"):
+                                with st.expander("Evidence from Resume"):
                                     st.code(claim['evidence_snippet'], language="text")
                         
                         with col2:

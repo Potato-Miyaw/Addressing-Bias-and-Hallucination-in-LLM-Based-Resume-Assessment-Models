@@ -465,12 +465,12 @@ def render_generate_send(api_base_url: str):
                                     result = resend_response.json()
                                     if result.get('success'):
                                         st.session_state.email_sent = True
-                                        st.success("✅ Email sent successfully!")
+                                        st.success("Email sent successfully!")
                                         st.rerun()
                                     else:
-                                        st.error("❌ Email still failed. Check SMTP configuration.")
+                                        st.error("Email still failed. Check SMTP configuration.")
                                 else:
-                                    st.error(f"❌ Resend failed: {resend_response.text}")
+                                    st.error(f"Resend failed: {resend_response.text}")
                 
                 if delivery_method in ["whatsapp", "both"] and not whatsapp_sent:
                     with col_resend2:
@@ -712,9 +712,9 @@ def render_view_responses(api_base_url: str):
                                             st.session_state.ml_prediction = result['prediction']
                                             st.rerun()
                                         else:
-                                            st.error(f"❌ Failed: {pred_response.text}")
+                                            st.error(f"Failed: {pred_response.text}")
                                     except Exception as e:
-                                        st.error(f"❌ Error: {str(e)}")
+                                        st.error(f"Error: {str(e)}")
                         
                         # Show prediction if available
                         if hasattr(st.session_state, 'ml_prediction'):
@@ -728,21 +728,21 @@ def render_view_responses(api_base_url: str):
                             
                             with col2:
                                 confidence = prediction['confidence'].upper()
-                                confidence_icon = {'HIGH': '🟢', 'MODERATE': '🟡', 'LOW': '🟠', 'NONE': '⚪'}
+                                confidence_icon = {'HIGH': '🟢', 'MODERATE': '🟡', 'LOW': '🟠', 'NONE': '⚫'}
                                 st.metric("Confidence", f"{confidence_icon.get(confidence, '')} {confidence}")
                             
                             with col3:
                                 recommendation = prediction['recommendation']
                                 rec_display = {
-                                    'strongly_recommend_hire': '✅ Strong Hire',
-                                    'recommend_hire': '👍 Hire',
-                                    'borderline': '🤔 Borderline',
-                                    'recommend_reject': '👎 Reject',
-                                    'strongly_recommend_reject': '❌ Strong Reject'
+                                    'strongly_recommend_hire': '🟢 Strong Hire',
+                                    'recommend_hire': '🟡 Hire',
+                                    'borderline': '🟠 Borderline',
+                                    'recommend_reject': '🔴 Reject',
+                                    'strongly_recommend_reject': '⚫ Strong Reject'
                                 }
                                 st.metric("Recommendation", rec_display.get(recommendation, recommendation))
                             
-                            with st.expander("📊 View Details"):
+                            with st.expander("View Details"):
                                 st.info(prediction['recommendation_text'])
                                 if prediction.get('top_features'):
                                     st.markdown("**Top Features:**")
@@ -783,7 +783,7 @@ def render_view_responses(api_base_url: str):
                                         label_visibility="collapsed"
                                     )
                                 with col_rate2:
-                                    rating_emoji = {1: "😞", 2: "😐", 3: "🙂", 4: "😊", 5: "🤩"}
+                                    rating_emoji = {1: "⚫", 2: "🔴", 3: "🟠", 4: "🟡", 5: "🟢"}
                                     st.markdown(f"<h2 style='text-align: center; margin-top: -10px;'>{rating_emoji[rating]}</h2>", unsafe_allow_html=True)
                                 
                                 ratings.append({
@@ -809,11 +809,11 @@ def render_view_responses(api_base_url: str):
                                     )
                                     
                                     if feedback_resp.status_code == 200:
-                                        st.success("✅ Ratings saved successfully!")
+                                        st.success("Ratings saved successfully!")
                                     else:
-                                        st.error(f"❌ Failed to save ratings: {feedback_resp.text}")
+                                        st.error(f"Failed to save ratings: {feedback_resp.text}")
                                 except Exception as e:
-                                    st.error(f"❌ Error: {str(e)}")
+                                    st.error(f"Error: {str(e)}")
                         
                         st.markdown("---")
                         
@@ -851,12 +851,12 @@ def render_view_responses(api_base_url: str):
                                 )
                                 
                                 if outcome_resp.status_code == 200:
-                                    st.success(f"✅ Decision '{outcome}' recorded!")
-                                    st.info("💡 This data helps improve the ML model.")
+                                    st.success(f"Decision '{outcome}' recorded!")
+                                    st.info("This data helps improve the ML model.")
                                 else:
-                                    st.error(f"❌ Failed: {outcome_resp.text}")
+                                    st.error(f"Failed: {outcome_resp.text}")
                             except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
+                                st.error(f"Error: {str(e)}")
                     else:
                         st.info("No responses received yet")
             else:
