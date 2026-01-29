@@ -104,9 +104,9 @@ class MatchResponse(BaseModel):
     match_id: str
     job_id: str
     resume_id: str
-    candidate_name: str
-    candidate_email: str
-    job_title: str
+    candidate_name: Optional[str] = None
+    candidate_email: Optional[str] = None
+    job_title: Optional[str] = None
     
     overall_match_score: float
     skill_match_score: float
