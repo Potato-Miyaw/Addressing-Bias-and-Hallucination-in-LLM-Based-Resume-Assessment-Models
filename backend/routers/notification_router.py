@@ -63,6 +63,17 @@ async def notify_power_automate(request: TeamsNotifyRequest):
 
         send_to_power_automate(summary, shortlist_csv, audit_pdf)
         return {"success": True, "summary": summary}
+    except RuntimeError as exc:
+        # Configuration errors should return 400 Bad Request with helpful message
+        if "not configured" in str(exc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Power Automate notification failed: {str(exc)}",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

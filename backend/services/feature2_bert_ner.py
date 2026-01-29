@@ -209,7 +209,19 @@ class ResumeNERExtractor:
             matches = re.findall(pattern, text, re.IGNORECASE)
             skills.update([m.strip() for m in matches if m])
         
-        return sorted(list(skills))
+        # Deduplicate case-insensitively, keeping the most common case (or first occurrence)
+        skills_dict = {}
+        for skill in skills:
+            skill_lower = skill.lower()
+            if skill_lower not in skills_dict:
+                skills_dict[skill_lower] = skill
+            else:
+                # Keep the version with more capitals (likely the proper case)
+                existing = skills_dict[skill_lower]
+                if sum(1 for c in skill if c.isupper()) > sum(1 for c in existing if c.isupper()):
+                    skills_dict[skill_lower] = skill
+        
+        return sorted(list(skills_dict.values()))
     
     def extract_education(self, text: str) -> List[Dict[str, str]]:
         """Extract education"""

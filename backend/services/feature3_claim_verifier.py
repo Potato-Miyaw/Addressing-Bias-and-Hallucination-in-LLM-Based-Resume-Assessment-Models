@@ -51,7 +51,7 @@ class ClaimVerifier:
     def compute_token_overlap(self, extraction: Any, ground_truth: Any) -> float:
         """
         Compute Jaccard similarity between extraction and ground truth.
-        Exact implementation from notebook.
+        IMPROVED: Case-insensitive + subset matching
         
         Args:
             extraction: The value extracted by the LLM
@@ -78,6 +78,10 @@ class ClaimVerifier:
         if not extraction_text:
             return 0.0
         
+        # Check if extraction is a list and ground truth is a list - do subset matching
+        if isinstance(extraction, (list, tuple)) and isinstance(ground_truth, (list, tuple)):
+            return self._compute_list_overlap(extraction, ground_truth)
+        
         try:
             extraction_tokens = set(word_tokenize(extraction_text.lower()))
             ground_truth_tokens = set(word_tokenize(ground_truth_text.lower()))
@@ -88,6 +92,55 @@ class ClaimVerifier:
         
         intersection = extraction_tokens & ground_truth_tokens
         union = extraction_tokens | ground_truth_tokens
+        
+        if not union:
+            return 1.0
+        
+        return len(intersection) / len(union)
+    
+    def _compute_list_overlap(self, extraction_list: List, ground_truth_list: List) -> float:
+        """
+        Compute overlap for list values - checks if all extraction items exist in ground truth
+        CASE-INSENSITIVE and SUBSTRING matching
+        
+        Args:
+            extraction_list: List of extracted values
+            ground_truth_list: List of ground truth values
+            
+        Returns:
+            float: 1.0 if all extraction items found in ground truth, else Jaccard similarity
+        """
+        if not extraction_list and not ground_truth_list:
+            return 1.0
+        if not ground_truth_list:
+            return 0.0
+        if not extraction_list:
+            return 0.0
+        
+        # Normalize to lowercase for comparison
+        extraction_normalized = [str(x).lower().strip() for x in extraction_list if x]
+        ground_truth_normalized = [str(x).lower().strip() for x in ground_truth_list if x]
+        
+        # Check if each extraction item is found in ground truth (substring match)
+        found_count = 0
+        for ext_item in extraction_normalized:
+            # Check if this extraction item appears in any ground truth item
+            for gt_item in ground_truth_normalized:
+                # Substring match: "MYTAGIN ASPIRING SOLUTIONS" matches "MYTAGIN ASPIRING SOLUTIONS PRIVATE LIMITED"
+                if ext_item in gt_item or gt_item in ext_item:
+                    found_count += 1
+                    break
+        
+        # If all extraction items found in ground truth, return 1.0 (perfect match)
+        if found_count == len(extraction_normalized):
+            return 1.0
+        
+        # Otherwise, compute Jaccard similarity
+        extraction_set = set(extraction_normalized)
+        ground_truth_set = set(ground_truth_normalized)
+        
+        intersection = extraction_set & ground_truth_set
+        union = extraction_set | ground_truth_set
         
         if not union:
             return 1.0

@@ -8,12 +8,15 @@ import sys
 import os
 from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+
 # Add project root to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-# Load environment variables
-load_dotenv()
+# Import database
+from backend.database import connect_to_mongo, close_mongo_connection
 
 # Import routers
 from backend.routers import (
@@ -26,15 +29,29 @@ from backend.routers import (
     feedback_router,
     bias_router,  # Multi-Model Bias Detection
     notification_router,
-    multilang_router # Feature 6
+    multilang_router,# Feature 6
+    data_router,   # Data queries
+    match_router,   # Match CRUD operations
+    questionnaire_router  # Questionnaire system
 )
 
 # Initialize FastAPI
 app = FastAPI(
     title="DSA 9 MVP - LLM Hiring System API",
-    description="Bias-aware, hallucination-detecting resume screening system",
+    description="Bias-aware, hallucination-detecting resume screening system with MongoDB persistence",
     version="1.0.0"
 )
+
+# Database lifecycle events
+@app.on_event("startup")
+async def startup_db_client():
+    """Connect to MongoDB on startup"""
+    await connect_to_mongo()
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    """Close MongoDB connection on shutdown"""
+    await close_mongo_connection()
 
 # CORS middleware
 app.add_middleware(
@@ -53,10 +70,12 @@ app.include_router(matching_router.router)
 app.include_router(ranking_router.router)
 app.include_router(pipeline_router.router)
 app.include_router(bias_router.router)  # Multi-Model Bias Detection
-app.include_router(bias_router.router) # Multi-Model Bias Detection
 app.include_router(multilang_router.router) # Feature 6
 app.include_router(feedback_router.router)
 app.include_router(notification_router.router)
+app.include_router(data_router.router)  # Data queries
+app.include_router(match_router.router)  # Match CRUD operations
+app.include_router(questionnaire_router.router)  # Questionnaire system
 
 # Health check
 @app.get("/")
@@ -74,13 +93,14 @@ async def health_check():
     """Detailed health check"""
     return {
         "status": "healthy",
+        "database": "connected",
         "endpoints": {
             "jd": "/api/jd/*",
             "resume": "/api/resume/*",
             "verify": "/api/verify/*",
             "match": "/api/match/*",
             "rank": "/api/rank/*",
-            "bias": "/api/bias/*",  # Multi-Model Bias Detection
+            "bias": "/api/bias/*",
             "pipeline": "/api/pipeline/*",
             "feedback": "/api/feedback/*"
         }

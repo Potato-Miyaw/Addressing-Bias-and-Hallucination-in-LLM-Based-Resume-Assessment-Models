@@ -106,6 +106,13 @@ class JDExtractor:
             matches = re.findall(pattern, jd_text, re.IGNORECASE)
             skills.update([m.strip() for m in matches if m])
         
+        # Deduplicate case-insensitively (keep version with more capitals)
+        skills_dict = {}
+        for skill in skills:
+            key = skill.lower()
+            if key not in skills_dict or sum(1 for c in skill if c.isupper()) > sum(1 for c in skills_dict[key] if c.isupper()):
+                skills_dict[key] = skill
+        
         # Experience - multiple patterns
         experience = 0
         exp_patterns = [
@@ -155,7 +162,7 @@ class JDExtractor:
                     certifications.add(cert)
         
         return {
-            "required_skills": sorted(list(skills)),
+            "required_skills": sorted(list(skills_dict.values())),
             "required_experience": experience,
             "required_education": education,
             "certifications": sorted(list(certifications)),

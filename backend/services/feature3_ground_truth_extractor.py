@@ -15,6 +15,40 @@ class GroundTruthExtractor:
         """Initialize ground truth extractor"""
         pass
     
+    def _is_valid_company_name(self, company: str) -> bool:
+        """Validate if a string looks like a real company name"""
+        if not company or len(company) < 5 or len(company) > 80:
+            return False
+        
+        # Blacklist of common false positives
+        false_positives = [
+            'EXPERIENCE', 'EDUCATION', 'PROFESSIONAL SUMMARY', 'CAREER OBJECTIVE',
+            'TECHNICAL EXPERTISE', 'SKILLS', 'PROJECTS', 'CERTIFICATIONS',
+            'Version Control System', 'Development IDE', 'Server Technologies',
+            'Management to understand', 'high efficiency and quality',
+            'client for gathering', 'user requirements',
+        ]
+        
+        company_upper = company.upper()
+        for false_positive in false_positives:
+            if false_positive.upper() in company_upper:
+                return False
+        
+        # Must have at least 2 words (except for single word with suffix like "GOOGLE INC")
+        words = company.split()
+        if len(words) < 2 and not any(suffix in company_upper for suffix in ['LIMITED', 'LTD', 'LLC', 'INC', 'CORP']):
+            return False
+        
+        # Should have company indicators or be mostly capitalized
+        has_company_suffix = any(suffix in company_upper for suffix in 
+                                 ['LIMITED', 'LTD', 'LLC', 'INC', 'CORP', 'PVT', 'SOLUTIONS', 'TECHNOLOGIES', 'SYSTEMS', 'SERVICES'])
+        
+        # Count capital letters
+        capital_ratio = sum(1 for c in company if c.isupper()) / len(company)
+        
+        # Valid if has company suffix OR is mostly uppercase (>40%)
+        return has_company_suffix or capital_ratio > 0.4
+    
     def extract_context_snippet(self, text: str, value: str, context_chars: int = 100) -> str:
         """Extract a snippet of text around the found value for evidence"""
         if not value or not text:
@@ -188,24 +222,33 @@ class GroundTruthExtractor:
                 break
         
         # 7. COMPANIES - Extract company names mentioned in text
-        # Look for common job-related patterns
+        # Look for common job-related patterns - IMPROVED with better filtering
         company_patterns = [
-            r'(?:at|@|with)\s+([A-Z][A-Z\s&\.]+(?:PRIVATE\s+LIMITED|LIMITED|LTD|LLC|INC|CORP|PVT|SOLUTIONS)?)',
-            r'(?:working|worked)\s+(?:at|with|for)\s+([A-Z][A-Za-z\s&\.]+(?:PRIVATE\s+LIMITED|LIMITED|LTD|LLC|INC)?)',
+            # Specific patterns with strong indicators
+            r'(?:worked|working)\s+(?:as|at|with|for)\s+(?:[A-Za-z\s]+\s+at\s+)?([A-Z][A-Z\s&]+(?:PRIVATE\s+LIMITED|LIMITED|LTD|LLC|INC|CORP|PVT|SOLUTIONS|TECHNOLOGIES))',
             r'(?:Company|Employer|Organization)\s*:\s*([A-Z][A-Za-z\s&\.]+)',
-            r'([A-Z][A-Z\s]+(?:PRIVATE\s+LIMITED|LIMITED|SOLUTIONS|TECHNOLOGIES))',
+            # Company names with common suffixes (must be mostly uppercase or title case)
+            r'\b([A-Z][A-Z\s&]{10,}(?:PRIVATE\s+LIMITED|LIMITED|SOLUTIONS|TECHNOLOGIES))\b',
         ]
         
         companies = []
-        for pattern in company_patterns:
+        
+        # First, try to find companies with strong contextual indicators
+        for pattern in company_patterns[:2]:  # Use first 2 patterns with strong context
             matches = re.findall(pattern, resume_text, re.IGNORECASE)
             for match in matches:
                 company = match.strip()
-                # Filter out common false positives
-                if 5 < len(company) < 80 and company not in ['EXPERIENCE', 'EDUCATION', 'PROFESSIONAL SUMMARY']:
-                    # Clean up the company name
-                    company = ' '.join(company.split())  # Normalize spaces
-                    companies.append(company)
+                # Strong validation - must look like a real company name
+                if self._is_valid_company_name(company):
+                    companies.append(' '.join(company.split()))  # Normalize spaces
+        
+        # If no companies found with strong context, try broader pattern
+        if not companies:
+            matches = re.findall(company_patterns[2], resume_text)
+            for match in matches:
+                company = match.strip()
+                if self._is_valid_company_name(company):
+                    companies.append(' '.join(company.split()))
         
         # Remove duplicates while preserving order
         seen = set()
@@ -216,9 +259,12 @@ class GroundTruthExtractor:
                 seen.add(company_normalized)
                 unique_companies.append(company)
         
+        # Limit to reasonable number
+        unique_companies = unique_companies[:3]
+        
         if unique_companies:
             ground_truth['current_company_name'] = unique_companies[0]
-            ground_truth['companies_worked_at'] = unique_companies[:5]
+            ground_truth['companies_worked_at'] = unique_companies
             logger.info(f"✅ Extracted COMPANIES: {unique_companies}")
         
         # Build experience object if we have data
