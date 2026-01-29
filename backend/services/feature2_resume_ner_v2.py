@@ -234,7 +234,14 @@ class ResumeNERExtractorV2:
             matches = re.findall(pattern, text, re.IGNORECASE)
             skills.update([m.strip() for m in matches])
         
-        return sorted(list(skills))
+        # Deduplicate case-insensitively (keep version with more capitals)
+        skills_dict = {}
+        for skill in skills:
+            key = skill.lower()
+            if key not in skills_dict or sum(1 for c in skill if c.isupper()) > sum(1 for c in skills_dict[key] if c.isupper()):
+                skills_dict[key] = skill
+        
+        return sorted(list(skills_dict.values()))
     
     def parse_resume(self, resume_text: str, use_advanced: bool = True) -> Dict[str, Any]:
         """

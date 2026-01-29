@@ -1,17 +1,140 @@
 """
 Feature 4: Job-Resume Matching
 Computes match scores and identifies skill gaps
+Uses hybrid fuzzy + semantic matching for skills
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 class JobResumeMatcher:
     def __init__(self):
-        pass
+        self._fuzzy_available = False
+        self._semantic_model = None
+        self._semantic_available = False
+        
+        # Try to import fuzzy matching
+        try:
+            from rapidfuzz import fuzz, process
+            self._fuzz = fuzz
+            self._process = process
+            self._fuzzy_available = True
+            logger.info("Fuzzy matching (rapidfuzz) loaded successfully")
+        except ImportError:
+            logger.warning("rapidfuzz not available - install with: pip install rapidfuzz")
+        
+        # Semantic model loaded lazily on first use
+        logger.info("Semantic matching will be loaded on demand")
+    
+    def _load_semantic_model(self):
+        """Lazy load semantic similarity model"""
+        if self._semantic_model is None:
+            try:
+                from sentence_transformers import SentenceTransformer, util
+                logger.info("Loading semantic model: all-MiniLM-L6-v2...")
+                self._semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+                self._semantic_util = util
+                self._semantic_available = True
+                logger.info("Semantic model loaded successfully")
+            except Exception as e:
+                logger.warning(f"Failed to load semantic model: {e}")
+                self._semantic_available = False
+        return self._semantic_available
+    
+    def _fuzzy_match_skills(self, req_skill: str, resume_skills: List[str], threshold: int = 85) -> Tuple[bool, str]:
+        """
+        Try to match a required skill using fuzzy string matching
+        
+        Returns: (matched, best_matching_skill)
+        """
+        if not self._fuzzy_available or not resume_skills:
+            return False, ""
+        
+        try:
+            # Find best match using token_set_ratio (handles word order, case)
+            result = self._process.extractOne(
+                req_skill,
+                resume_skills,
+                scorer=self._fuzz.token_set_ratio
+            )
+            
+            if result and result[1] >= threshold:
+                return True, result[0]
+        except Exception as e:
+            logger.error(f"Fuzzy matching error: {e}")
+        
+        return False, ""
+    
+    def _semantic_match_skills(self, req_skill: str, resume_skills: List[str], threshold: float = 0.75) -> Tuple[bool, str]:
+        """
+        Try to match a required skill using semantic similarity
+        
+        Returns: (matched, best_matching_skill)
+        """
+        if not self._load_semantic_model() or not resume_skills:
+            return False, ""
+        
+        try:
+            # Encode the required skill
+            req_embedding = self._semantic_model.encode([req_skill], convert_to_tensor=True)
+            
+            # Encode all resume skills
+            res_embeddings = self._semantic_model.encode(resume_skills, convert_to_tensor=True)
+            
+            # Compute cosine similarities
+            similarities = self._semantic_util.cos_sim(req_embedding, res_embeddings)[0]
+            
+            # Find best match
+            max_sim_idx = similarities.argmax().item()
+            max_sim = similarities[max_sim_idx].item()
+            
+            if max_sim >= threshold:
+                return True, resume_skills[max_sim_idx]
+        except Exception as e:
+            logger.error(f"Semantic matching error: {e}")
+        
+        return False, ""
+    
+    def _hybrid_skill_match(self, resume_skills: List[str], required_skills: List[str]) -> Tuple[List[str], List[str], List[str]]:
+        """
+        Hybrid matching: Fuzzy first (fast), then semantic (smart)
+        
+        Returns: (matched_required, matched_resume, skill_gaps)
+        """
+        if not required_skills:
+            return [], [], []
+        
+        matched_required = []  # Required skills that were matched
+        matched_resume = []    # Resume skills that matched
+        skill_gaps = []        # Required skills not found
+        
+        for req_skill in required_skills:
+            # Try fuzzy match first (fast)
+            fuzzy_matched, fuzzy_skill = self._fuzzy_match_skills(req_skill, resume_skills, threshold=85)
+            
+            if fuzzy_matched:
+                matched_required.append(req_skill)
+                matched_resume.append(fuzzy_skill)
+                continue
+            
+            # Fall back to semantic match (slower but smarter)
+            semantic_matched, semantic_skill = self._semantic_match_skills(req_skill, resume_skills, threshold=0.75)
+            
+            if semantic_matched:
+                matched_required.append(req_skill)
+                matched_resume.append(semantic_skill)
+                continue
+            
+            # No match found
+            skill_gaps.append(req_skill)
+        
+        return matched_required, matched_resume, skill_gaps
     
     def compute_skill_match(self, resume_skills: List[str], required_skills: List[str]) -> float:
-        """Jaccard similarity for skills"""
+        """Jaccard similarity for skills (legacy method)"""
         if not required_skills:
             return 1.0
         
@@ -82,19 +205,38 @@ class JobResumeMatcher:
         required_exp = jd_data.get('required_experience', 0)
         required_edu = jd_data.get('required_education', '')
         
-        # Skill Match (Jaccard similarity) - CASE INSENSITIVE
+        # Skill Match (Jaccard similarity) - CASE INSENSITIVE + SUBSTRING MATCHING
         if required_skills:
-            resume_skills_lower = {s.lower().strip() for s in resume_skills}
-            required_skills_lower = {s.lower().strip() for s in required_skills}
+            resume_skills_lower = {s.lower().strip() for s in resume_skills if s}
+            required_skills_lower = {s.lower().strip() for s in required_skills if s}
             
-            matched = resume_skills_lower.intersection(required_skills_lower)
+            # Find matches using substring matching (more flexible)
+            matched = set()
+            for req_skill in required_skills_lower:
+                for res_skill in resume_skills_lower:
+                    # Check both directions: exact match or substring
+                    if req_skill == res_skill or req_skill in res_skill or res_skill in req_skill:
+                        matched.add(req_skill)
+                        break
+            
             union = resume_skills_lower.union(required_skills_lower)
             
-            skill_match = (len(matched) / len(union)) * 100 if union else 0
+            skill_match = (len(matched) / len(required_skills_lower)) * 100 if required_skills_lower else 0
             
             # Find original case for matched and gaps
-            matched_skills = [s for s in resume_skills if s.lower() in matched]
-            skill_gaps = [s for s in required_skills if s.lower() not in resume_skills_lower]
+            matched_skills = []
+            for s in resume_skills:
+                s_lower = s.lower().strip()
+                for req_skill in required_skills_lower:
+                    if req_skill == s_lower or req_skill in s_lower or s_lower in req_skill:
+                        matched_skills.append(s)
+                        break
+            
+            skill_gaps = []
+            for s in required_skills:
+                s_lower = s.lower().strip()
+                if s_lower not in matched:
+                    skill_gaps.append(s)
         else:
             skill_match = 100.0
             matched_skills = []
