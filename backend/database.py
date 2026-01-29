@@ -62,7 +62,17 @@ async def create_indexes():
         await db_instance.db.ground_truth.create_index([("candidate_email", ASCENDING)])
         await db_instance.db.ground_truth.create_index([("upload_source", ASCENDING)])
         
-        logger.info("✅ Database indexes created for job_descriptions and ground_truth")
+        # Matches indexes
+        await db_instance.db.matches.create_index([("match_id", ASCENDING)], unique=True)
+        await db_instance.db.matches.create_index([("job_id", ASCENDING)])
+        await db_instance.db.matches.create_index([("resume_id", ASCENDING)])
+        await db_instance.db.matches.create_index([("match_tier", ASCENDING)])
+        await db_instance.db.matches.create_index([("overall_match_score", DESCENDING)])
+        await db_instance.db.matches.create_index([("created_at", DESCENDING)])
+        await db_instance.db.matches.create_index([("candidate_email", ASCENDING)])
+        await db_instance.db.matches.create_index([("match_source", ASCENDING)])
+        
+        logger.info("✅ Database indexes created for job_descriptions, ground_truth, and matches")
     except Exception as e:
         logger.warning(f"Index creation warning: {e}")
 
@@ -345,4 +355,194 @@ async def get_ground_truth_count() -> int:
         return count
     except Exception as e:
         logger.error(f"❌ Failed to count ground truths: {e}")
+        return 0
+
+# ============================================================================
+# CRUD Operations for Matches (Job-Resume Matching Results)
+# ============================================================================
+
+async def save_match(match_data: Dict[str, Any]) -> bool:
+    """
+    Save job-resume match result
+    
+    Args:
+        match_data: Dict with match_id, job_id, resume_id, scores, etc.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        match_data["created_at"] = datetime.utcnow()
+        
+        await db_instance.db.matches.update_one(
+            {"match_id": match_data["match_id"]},
+            {"$set": match_data},
+            upsert=True
+        )
+        logger.info(f"✅ Saved match: {match_data['match_id']}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to save match: {e}")
+        return False
+
+async def get_match(match_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get match by ID
+    
+    Args:
+        match_id: Match ID
+    
+    Returns:
+        Match data or None
+    """
+    try:
+        match = await db_instance.db.matches.find_one({"match_id": match_id})
+        if match:
+            match.pop("_id", None)
+            return match
+        return None
+    except Exception as e:
+        logger.error(f"❌ Failed to get match: {e}")
+        return None
+
+async def get_matches_by_job(job_id: str, limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
+    """
+    Get all matches for a specific job
+    
+    Args:
+        job_id: Job ID
+        limit: Maximum number of matches to return
+        skip: Number of matches to skip
+    
+    Returns:
+        List of matches sorted by overall_match_score descending
+    """
+    try:
+        cursor = db_instance.db.matches.find({"job_id": job_id})\
+            .sort("overall_match_score", DESCENDING)\
+            .skip(skip)\
+            .limit(limit)
+        
+        matches = []
+        async for match in cursor:
+            match.pop("_id", None)
+            matches.append(match)
+        return matches
+    except Exception as e:
+        logger.error(f"❌ Failed to get matches by job: {e}")
+        return []
+
+async def get_matches_by_resume(resume_id: str, limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
+    """
+    Get all matches for a specific resume
+    
+    Args:
+        resume_id: Resume ID
+        limit: Maximum number of matches to return
+        skip: Number of matches to skip
+    
+    Returns:
+        List of matches sorted by overall_match_score descending
+    """
+    try:
+        cursor = db_instance.db.matches.find({"resume_id": resume_id})\
+            .sort("overall_match_score", DESCENDING)\
+            .skip(skip)\
+            .limit(limit)
+        
+        matches = []
+        async for match in cursor:
+            match.pop("_id", None)
+            matches.append(match)
+        return matches
+    except Exception as e:
+        logger.error(f"❌ Failed to get matches by resume: {e}")
+        return []
+
+async def get_matches_by_tier(job_id: str, tier: str) -> List[Dict[str, Any]]:
+    """
+    Get matches filtered by match tier
+    
+    Args:
+        job_id: Job ID
+        tier: Match tier (Excellent/Good/Fair/Poor)
+    
+    Returns:
+        List of matches with specified tier
+    """
+    try:
+        cursor = db_instance.db.matches.find({
+            "job_id": job_id,
+            "match_tier": tier
+        }).sort("overall_match_score", DESCENDING)
+        
+        matches = []
+        async for match in cursor:
+            match.pop("_id", None)
+            matches.append(match)
+        return matches
+    except Exception as e:
+        logger.error(f"❌ Failed to get matches by tier: {e}")
+        return []
+
+async def list_matches(limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
+    """
+    List all matches with pagination
+    
+    Args:
+        limit: Maximum number of matches to return
+        skip: Number of matches to skip
+    
+    Returns:
+        List of matches sorted by created_at descending
+    """
+    try:
+        cursor = db_instance.db.matches.find()\
+            .sort("created_at", DESCENDING)\
+            .skip(skip)\
+            .limit(limit)
+        
+        matches = []
+        async for match in cursor:
+            match.pop("_id", None)
+            matches.append(match)
+        return matches
+    except Exception as e:
+        logger.error(f"❌ Failed to list matches: {e}")
+        return []
+
+async def delete_match(match_id: str) -> bool:
+    """
+    Delete a match
+    
+    Args:
+        match_id: Match ID
+    
+    Returns:
+        True if deleted, False otherwise
+    """
+    try:
+        result = await db_instance.db.matches.delete_one({"match_id": match_id})
+        if result.deleted_count > 0:
+            logger.info(f"✅ Deleted match: {match_id}")
+            return True
+        else:
+            logger.warning(f"⚠️ Match not found: {match_id}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Failed to delete match: {e}")
+        return False
+
+async def get_match_count() -> int:
+    """
+    Get total count of matches
+    
+    Returns:
+        Total number of matches
+    """
+    try:
+        count = await db_instance.db.matches.count_documents({})
+        return count
+    except Exception as e:
+        logger.error(f"❌ Failed to count matches: {e}")
         return 0

@@ -5,8 +5,13 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-def render(api_base_url: str):
-    """Render the Matching & Ranking tab"""
+def render(api_base_url: str, portal_type: str = "hr_portal"):
+    """Render the Matching & Ranking tab
+    
+    Args:
+        api_base_url: Base URL for API calls
+        portal_type: Type of portal (hr_portal or candidate_portal)
+    """
     st.header("🎯 Job-Resume Matching & Ranking")
     
     # Job Selection Section
@@ -84,9 +89,127 @@ def render(api_base_url: str):
     st.markdown("---")
     st.subheader("2️⃣ Select Resumes and Match")
     
-    if not st.session_state.resumes_data:
-        st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
-    elif selected_job:
+    # Resume source selection
+    resume_source = st.radio(
+        "Resume Source:",
+        ["Use Current Session Resumes", "Select from Database"],
+        horizontal=True,
+        key="resume_source_selector"
+    )
+    
+    selected_resumes = []
+    
+    if resume_source == "Use Current Session Resumes":
+        if not st.session_state.resumes_data:
+            st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
+            return
+        else:
+            selected_resumes = st.session_state.resumes_data
+            st.info(f"📄 Using {len(selected_resumes)} resume(s) from current session")
+    
+    else:  # Select from Database
+        try:
+            # Fetch resumes from database (max 100 per API limit)
+            resumes_response = requests.get(f"{api_base_url}/api/data/resumes?limit=100")
+            
+            if resumes_response.status_code == 200:
+                resumes_data = resumes_response.json()
+                db_resumes = resumes_data.get('resumes', [])
+                
+                if not db_resumes:
+                    st.warning("⚠️ No resumes found in database. Please upload resumes first (Tab 2)")
+                    return
+                
+                st.success(f"✅ Found {len(db_resumes)} resume(s) in database")
+                
+                # Filter options
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    upload_source_filter = st.selectbox(
+                        "Filter by Source:",
+                        ["All", "HR Uploaded", "Candidate Self-Upload"],
+                        key="source_filter"
+                    )
+                
+                with col2:
+                    file_type_filter = st.selectbox(
+                        "Filter by Type:",
+                        ["All", "PDF", "DOCX", "TXT"],
+                        key="type_filter"
+                    )
+                
+                # Apply filters
+                filtered_resumes = db_resumes
+                if upload_source_filter == "HR Uploaded":
+                    filtered_resumes = [r for r in filtered_resumes if r.get('upload_source') == 'hr_upload']
+                elif upload_source_filter == "Candidate Self-Upload":
+                    filtered_resumes = [r for r in filtered_resumes if r.get('upload_source') == 'candidate_self']
+                
+                if file_type_filter != "All":
+                    filtered_resumes = [r for r in filtered_resumes if r.get('file_type', '').upper() == file_type_filter]
+                
+                if not filtered_resumes:
+                    st.warning("⚠️ No resumes match the selected filters")
+                    return
+                
+                st.info(f"📊 {len(filtered_resumes)} resume(s) after filtering")
+                
+                # Multi-select for resumes
+                st.markdown("**Select Resumes to Match:**")
+                
+                # Create resume options with details
+                resume_options = {}
+                for resume in filtered_resumes:
+                    name = resume.get('candidate_name', 'Unknown')
+                    email = resume.get('candidate_email', 'No email')
+                    resume_id = resume.get('resume_id', 'unknown')[:12]
+                    source = "🏢 HR" if resume.get('upload_source') == 'hr_upload' else "👤 Self"
+                    
+                    label = f"{name} ({email}) - {resume_id}... {source}"
+                    resume_options[label] = resume
+                
+                # Select all checkbox
+                select_all = st.checkbox("Select All Resumes", key="select_all_resumes")
+                
+                if select_all:
+                    selected_resume_keys = list(resume_options.keys())
+                else:
+                    selected_resume_keys = st.multiselect(
+                        "Choose resumes:",
+                        options=list(resume_options.keys()),
+                        key="resume_multiselect",
+                        help="Select one or more resumes to match against the job"
+                    )
+                
+                # Convert to resume data format
+                for key in selected_resume_keys:
+                    resume = resume_options[key]
+                    
+                    # Ensure the resume has the 'text' field for parsing
+                    # Ground truth has 'raw_text', but matcher expects 'text'
+                    if 'raw_text' in resume and 'text' not in resume:
+                        resume['text'] = resume['raw_text']
+                    
+                    # Format to match session state structure
+                    selected_resumes.append({
+                        'data': resume
+                    })
+                
+                if selected_resumes:
+                    st.success(f"✅ Selected {len(selected_resumes)} resume(s) for matching")
+                else:
+                    st.info("👆 Please select at least one resume")
+                    return
+                    
+            else:
+                st.error("Failed to fetch resumes from database")
+                return
+        except Exception as e:
+            st.error(f"Error fetching resumes: {str(e)}")
+            return
+    
+    if selected_resumes and selected_job:
         st.success("✅ Ready to match and rank candidates!")
         
         use_fairness = st.checkbox("Use Fairness-Aware Ranking", value=False,
@@ -99,31 +222,83 @@ def render(api_base_url: str):
         if st.button("🚀 Match & Rank Candidates", type="primary"):
             with st.spinner("Processing candidates..."):
                 try:
+                    # First, check for existing matches to avoid duplicates
+                    st.info("🔍 Checking for existing matches...")
+                    existing_matches_response = requests.get(
+                        f"{api_base_url}/api/matches/job/{selected_job['job_id']}"
+                    )
+                    
+                    existing_match_map = {}
+                    if existing_matches_response.status_code == 200:
+                        existing_matches = existing_matches_response.json()
+                        # Map resume_id -> match for quick lookup
+                        for match in existing_matches:
+                            existing_match_map[match['resume_id']] = match
+                        st.info(f"📊 Found {len(existing_match_map)} existing match(es) for this job")
+                    
                     # Prepare candidates data
                     candidates = []
+                    newly_matched = 0
+                    reused_matches = 0
                     
-                    for resume in st.session_state.resumes_data:
+                    for resume in selected_resumes:
                         resume_data = resume['data']
+                        resume_id = resume_data.get('resume_id', 'unknown')
                         
-                        # Match to job using the new endpoint with job_id
-                        match_response = requests.post(
-                            f"{api_base_url}/api/match/with-job-id",
-                            json={
-                                "resume_id": resume_data.get('resume_id', 'unknown'),
-                                "job_id": selected_job['job_id'],
-                                "resume_data": resume_data  # Pass full data (includes 'text' field)
+                        # Check if match already exists
+                        if resume_id in existing_match_map:
+                            # Reuse existing match
+                            existing_match = existing_match_map[resume_id]
+                            reused_matches += 1
+                            
+                            # Convert existing match to expected format
+                            match_result = {
+                                "match_score": existing_match['overall_match_score'] * 100,
+                                "skill_match": existing_match['skill_match_score'] * 100,
+                                "experience_match": existing_match['experience_match_score'] * 100,
+                                "education_match": existing_match['education_match_score'] * 100,
+                                "matched_skills": existing_match['matched_skills'],
+                                "skill_gaps": existing_match['missing_skills'],
+                                "overall_score": existing_match['overall_match_score']
                             }
-                        )
-                        
-                        if match_response.status_code == 200:
-                            match_result = match_response.json()['match_result']
                             
                             candidates.append({
-                                "resume_id": resume_data['resume_id'],
+                                "resume_id": resume_id,
                                 "resume_data": resume_data,
                                 "match_data": match_result,
                                 "demographics": {"gender": 1, "race_gender": "Unknown"}
                             })
+                        else:
+                            # Create new match
+                            newly_matched += 1
+                            
+                            # Determine match_source based on portal type
+                            match_source = "hr_initiated" if portal_type == "hr_portal" else "candidate_initiated"
+                            
+                            # Match to job using the new endpoint with job_id
+                            match_response = requests.post(
+                                f"{api_base_url}/api/match/with-job-id",
+                                json={
+                                    "resume_id": resume_data.get('resume_id', 'unknown'),
+                                    "job_id": selected_job['job_id'],
+                                    "resume_data": resume_data,  # Pass full data (includes 'text' field)
+                                    "match_source": match_source
+                                }
+                            )
+                            
+                            if match_response.status_code == 200:
+                                match_result = match_response.json()['match_result']
+                                
+                                candidates.append({
+                                    "resume_id": resume_data['resume_id'],
+                                    "resume_data": resume_data,
+                                    "match_data": match_result,
+                                    "demographics": {"gender": 1, "race_gender": "Unknown"}
+                                })
+                    
+                    # Show matching summary
+                    if newly_matched > 0 or reused_matches > 0:
+                        st.success(f"✅ Matching complete! {newly_matched} new match(es), {reused_matches} reused from database")
                     
                     # Rank candidates
                     rank_response = requests.post(

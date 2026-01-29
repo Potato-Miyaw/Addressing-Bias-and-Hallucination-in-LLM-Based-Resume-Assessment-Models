@@ -572,7 +572,8 @@ if st.session_state.candidate_resume:
                                         json={
                                             "resume_id": resume_data['resume_id'],
                                             "job_id": job['job_id'],
-                                            "resume_data": resume_data
+                                            "resume_data": resume_data,
+                                            "match_source": "candidate_initiated"
                                         }
                                     )
                                     

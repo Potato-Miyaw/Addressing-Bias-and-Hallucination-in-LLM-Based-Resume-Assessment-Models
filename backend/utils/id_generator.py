@@ -75,16 +75,23 @@ def generate_resume_id(resume_text: str, candidate_name: str = None) -> Tuple[st
 
 def generate_match_id(job_id: str, resume_id: str) -> str:
     """
-    Generate match ID from job and resume IDs
+    Generate unique match ID with timestamp
     
     Args:
         job_id: Job ID
         resume_id: Resume ID
     
     Returns:
-        Match ID: "match_{job_id}_{resume_id}"
+        Match ID: "match_20260129013045_a3f2e1b9"
     """
-    return f"match_{job_id}_{resume_id}"
+    # Generate timestamp with microseconds
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")[:17]
+    
+    # Create hash from both IDs for uniqueness
+    combined = f"{job_id}_{resume_id}".encode()
+    id_hash = hashlib.sha256(combined).hexdigest()[:8]
+    
+    return f"match_{timestamp}_{id_hash}"
 
 
 def generate_verification_id(resume_id: str) -> str:

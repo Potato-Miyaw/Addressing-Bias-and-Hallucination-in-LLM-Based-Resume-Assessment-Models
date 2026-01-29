@@ -11,6 +11,7 @@ from . import pipeline_router
 from . import feedback_router
 from . import bias_router  # Multi-Model Bias Detection
 from . import notification_router
+from . import match_router  # Match CRUD operations
 
 __all__ = [
     "jd_router",
@@ -22,4 +23,5 @@ __all__ = [
     "feedback_router",
     "bias_router",  # Multi-Model Bias Detection
     "notification_router",
+    "match_router",  # Match CRUD operations
 ]
