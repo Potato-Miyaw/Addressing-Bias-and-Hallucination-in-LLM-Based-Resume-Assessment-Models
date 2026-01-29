@@ -72,7 +72,27 @@ async def create_indexes():
         await db_instance.db.matches.create_index([("candidate_email", ASCENDING)])
         await db_instance.db.matches.create_index([("match_source", ASCENDING)])
         
-        logger.info("✅ Database indexes created for job_descriptions, ground_truth, and matches")
+        # Questionnaires indexes
+        await db_instance.db.questionnaires.create_index([("questionnaire_id", ASCENDING)], unique=True)
+        await db_instance.db.questionnaires.create_index([("created_at", DESCENDING)])
+        await db_instance.db.questionnaires.create_index([("status", ASCENDING)])
+        
+        # Questionnaire invitations indexes
+        await db_instance.db.questionnaire_invitations.create_index([("invitation_id", ASCENDING)], unique=True)
+        await db_instance.db.questionnaire_invitations.create_index([("token", ASCENDING)], unique=True)
+        await db_instance.db.questionnaire_invitations.create_index([("candidate_email", ASCENDING)])
+        await db_instance.db.questionnaire_invitations.create_index([("questionnaire_id", ASCENDING)])
+        await db_instance.db.questionnaire_invitations.create_index([("used", ASCENDING)])
+        await db_instance.db.questionnaire_invitations.create_index([("expires_at", ASCENDING)])
+        
+        # Questionnaire responses indexes
+        await db_instance.db.questionnaire_responses.create_index([("response_id", ASCENDING)], unique=True)
+        await db_instance.db.questionnaire_responses.create_index([("token", ASCENDING)])
+        await db_instance.db.questionnaire_responses.create_index([("candidate_email", ASCENDING)])
+        await db_instance.db.questionnaire_responses.create_index([("questionnaire_id", ASCENDING)])
+        await db_instance.db.questionnaire_responses.create_index([("submitted_at", DESCENDING)])
+        
+        logger.info("✅ Database indexes created for all collections")
     except Exception as e:
         logger.warning(f"Index creation warning: {e}")
 
@@ -546,3 +566,270 @@ async def get_match_count() -> int:
     except Exception as e:
         logger.error(f"❌ Failed to count matches: {e}")
         return 0
+
+
+# ============================================================================
+# CRUD Operations for Questionnaires
+# ============================================================================
+
+async def save_questionnaire(questionnaire_data: Dict[str, Any]) -> bool:
+    """
+    Save or update questionnaire
+    
+    Args:
+        questionnaire_data: Questionnaire data with questionnaire_id
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        questionnaire_data["updated_at"] = datetime.utcnow()
+        if "created_at" not in questionnaire_data:
+            questionnaire_data["created_at"] = datetime.utcnow()
+        
+        await db_instance.db.questionnaires.update_one(
+            {"questionnaire_id": questionnaire_data["questionnaire_id"]},
+            {"$set": questionnaire_data},
+            upsert=True
+        )
+        logger.info(f"✅ Saved questionnaire: {questionnaire_data['questionnaire_id']}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to save questionnaire: {e}")
+        return False
+
+
+async def get_questionnaire(questionnaire_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get questionnaire by ID
+    
+    Args:
+        questionnaire_id: Questionnaire ID
+    
+    Returns:
+        Questionnaire dict or None
+    """
+    try:
+        questionnaire = await db_instance.db.questionnaires.find_one({"questionnaire_id": questionnaire_id})
+        if questionnaire:
+            questionnaire.pop("_id", None)
+        return questionnaire
+    except Exception as e:
+        logger.error(f"❌ Failed to get questionnaire: {e}")
+        return None
+
+
+async def list_questionnaires(limit: int = 50, skip: int = 0, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    List questionnaires with optional status filter
+    
+    Args:
+        limit: Maximum number to return
+        skip: Number to skip
+        status: Filter by status (active/archived)
+    
+    Returns:
+        List of questionnaires
+    """
+    try:
+        query = {} if not status else {"status": status}
+        cursor = db_instance.db.questionnaires.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
+        
+        questionnaires = []
+        async for q in cursor:
+            q.pop("_id", None)
+            questionnaires.append(q)
+        return questionnaires
+    except Exception as e:
+        logger.error(f"❌ Failed to list questionnaires: {e}")
+        return []
+
+
+async def delete_questionnaire(questionnaire_id: str) -> bool:
+    """
+    Delete a questionnaire
+    
+    Args:
+        questionnaire_id: Questionnaire ID
+    
+    Returns:
+        True if deleted, False otherwise
+    """
+    try:
+        result = await db_instance.db.questionnaires.delete_one({"questionnaire_id": questionnaire_id})
+        if result.deleted_count > 0:
+            logger.info(f"✅ Deleted questionnaire: {questionnaire_id}")
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"❌ Failed to delete questionnaire: {e}")
+        return False
+
+
+# ============================================================================
+# CRUD Operations for Questionnaire Invitations
+# ============================================================================
+
+async def save_invitation(invitation_data: Dict[str, Any]) -> bool:
+    """
+    Save questionnaire invitation
+    
+    Args:
+        invitation_data: Invitation data with invitation_id and token
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        invitation_data["created_at"] = datetime.utcnow()
+        
+        await db_instance.db.questionnaire_invitations.update_one(
+            {"invitation_id": invitation_data["invitation_id"]},
+            {"$set": invitation_data},
+            upsert=True
+        )
+        logger.info(f"✅ Saved invitation: {invitation_data['invitation_id']}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to save invitation: {e}")
+        return False
+
+
+async def get_invitation_by_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Get invitation by token
+    
+    Args:
+        token: Unique token string
+    
+    Returns:
+        Invitation dict or None
+    """
+    try:
+        invitation = await db_instance.db.questionnaire_invitations.find_one({"token": token})
+        if invitation:
+            invitation.pop("_id", None)
+        return invitation
+    except Exception as e:
+        logger.error(f"❌ Failed to get invitation by token: {e}")
+        return None
+
+
+async def mark_invitation_used(token: str) -> bool:
+    """
+    Mark invitation as used
+    
+    Args:
+        token: Invitation token
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        result = await db_instance.db.questionnaire_invitations.update_one(
+            {"token": token},
+            {"$set": {"used": True, "used_at": datetime.utcnow()}}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        logger.error(f"❌ Failed to mark invitation used: {e}")
+        return False
+
+
+async def get_invitations_by_questionnaire(questionnaire_id: str) -> List[Dict[str, Any]]:
+    """
+    Get all invitations for a questionnaire
+    
+    Args:
+        questionnaire_id: Questionnaire ID
+    
+    Returns:
+        List of invitations
+    """
+    try:
+        cursor = db_instance.db.questionnaire_invitations.find(
+            {"questionnaire_id": questionnaire_id}
+        ).sort("sent_at", DESCENDING)
+        
+        invitations = []
+        async for inv in cursor:
+            inv.pop("_id", None)
+            invitations.append(inv)
+        return invitations
+    except Exception as e:
+        logger.error(f"❌ Failed to get invitations: {e}")
+        return []
+
+
+# ============================================================================
+# CRUD Operations for Questionnaire Responses
+# ============================================================================
+
+async def save_response(response_data: Dict[str, Any]) -> bool:
+    """
+    Save questionnaire response
+    
+    Args:
+        response_data: Response data with response_id
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        response_data["submitted_at"] = datetime.utcnow()
+        
+        await db_instance.db.questionnaire_responses.update_one(
+            {"response_id": response_data["response_id"]},
+            {"$set": response_data},
+            upsert=True
+        )
+        logger.info(f"✅ Saved response: {response_data['response_id']}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to save response: {e}")
+        return False
+
+
+async def get_response_by_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Get response by token (check if already submitted)
+    
+    Args:
+        token: Invitation token
+    
+    Returns:
+        Response dict or None
+    """
+    try:
+        response = await db_instance.db.questionnaire_responses.find_one({"token": token})
+        if response:
+            response.pop("_id", None)
+        return response
+    except Exception as e:
+        logger.error(f"❌ Failed to get response: {e}")
+        return None
+
+
+async def get_responses_by_questionnaire(questionnaire_id: str) -> List[Dict[str, Any]]:
+    """
+    Get all responses for a questionnaire
+    
+    Args:
+        questionnaire_id: Questionnaire ID
+    
+    Returns:
+        List of responses
+    """
+    try:
+        cursor = db_instance.db.questionnaire_responses.find(
+            {"questionnaire_id": questionnaire_id}
+        ).sort("submitted_at", DESCENDING)
+        
+        responses = []
+        async for resp in cursor:
+            resp.pop("_id", None)
+            responses.append(resp)
+        return responses
+    except Exception as e:
+        logger.error(f"❌ Failed to get responses: {e}")
+        return []
