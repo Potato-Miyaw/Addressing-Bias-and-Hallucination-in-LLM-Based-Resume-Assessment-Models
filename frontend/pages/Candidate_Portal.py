@@ -17,7 +17,6 @@ API_BASE_URL = "http://localhost:8000"
 # Page config
 st.set_page_config(
     page_title="Candidate Portal - DSA 9 MVP",
-    page_icon="👔",
     layout="wide"
 )
 
@@ -28,36 +27,36 @@ if 'candidate_results' not in st.session_state:
     st.session_state.candidate_results = None
 
 # Header
-st.title("👔 Candidate Portal")
+st.title("Candidate Portal")
 st.markdown("Upload your resume and see how you match with job openings")
 
 # API Status check
 with st.sidebar:
-    st.markdown("### 🔌 Connection Status")
+    st.markdown("### Connection Status")
     try:
         response = requests.get(f"{API_BASE_URL}/health", timeout=2)
         if response.status_code == 200:
-            st.success("✅ API Connected")
+            st.success("API Connected")
         else:
-            st.error("❌ API Error")
+            st.error("API Error")
     except:
-        st.error("❌ API Offline")
+        st.error("API Offline")
         st.info("Please contact the administrator")
 
 st.markdown("---")
 
 # Step 1: Upload Resume
-st.header("📄 Step 1: Upload Your Resume")
-st.markdown("We support PDF, DOCX, and TXT formats")
+st.header("Upload Your Resume")
+st.markdown("PDF, DOCX, and TXT formats")
 
 # NER Model Selection
-st.subheader("🧠 Choose Extraction Model")
+st.subheader("Choose Extraction Model")
 ner_model = st.radio(
     "Select the AI model for resume analysis:",
     [
-        "🔄 Hybrid (Recommended) - Best of both worlds",
-        "🎯 Generic BERT - Good for standard resumes",
-        "📋 Resume-Specific - Optimized for technical resumes"
+        "Hybrid (Recommended) - Best of both worlds",
+        "Generic BERT - Good for standard resumes",
+        "Resume-Specific - Optimized for technical resumes"
     ],
     index=0,
     help="Hybrid combines multiple models for best accuracy"
@@ -81,10 +80,10 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    st.success(f"✅ File uploaded: {uploaded_file.name}")
-    st.info(f"🤖 Selected model: **{model_name}**")
+    st.success(f"File uploaded: {uploaded_file.name}")
+    st.info(f"Selected model: **{model_name}**")
     
-    if st.button("🚀 Parse Resume", type="primary"):
+    if st.button("Parse Resume", type="primary"):
         with st.spinner(f"Analyzing your resume with {model_name}..."):
             try:
                 # Send file to backend
@@ -103,44 +102,44 @@ if uploaded_file:
                     
                     # Show success message
                     if resume_data.get('saved_to_db'):
-                        st.success("✅ Resume parsed and saved to database!")
+                        st.success("Resume parsed and saved to database!")
                         if resume_data.get('is_duplicate'):
-                            st.warning(f"⚠️ {resume_data.get('duplicate_warning', 'Duplicate detected')}")
+                            st.warning(f"{resume_data.get('duplicate_warning', 'Duplicate detected')}")
                     else:
-                        st.success("✅ Resume parsed successfully!")
+                        st.success("Resume parsed successfully!")
                     
                     st.rerun()
                 else:
-                    st.error(f"❌ Failed to parse resume: {response.text}")
+                    st.error(f"Failed to parse resume: {response.text}")
             
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f"Error: {str(e)}")
 
 # Step 2: View Extracted Information
 if st.session_state.candidate_resume:
     st.markdown("---")
-    st.header("📊 Step 2: Your Extracted Information")
+    st.header("Your Extracted Information")
     
     resume_data = st.session_state.candidate_resume['data']
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("👤 Personal Information")
+        st.subheader("Personal Information")
         st.markdown(f"**Name:** {resume_data.get('name', 'Unknown')}")
         st.markdown(f"**Email:** {resume_data.get('email', 'Not found')}")
         st.markdown(f"**Phone:** {resume_data.get('phone', 'Not found')}")
         st.markdown(f"**Location:** {resume_data.get('location', 'Not specified')}")
     
     with col2:
-        st.subheader("📈 Resume Statistics")
+        st.subheader("Resume Statistics")
         st.metric("Resume ID", resume_data.get('resume_id', 'N/A'))
         st.metric("File Type", resume_data.get('file_type', 'N/A'))
         st.metric("Text Length", f"{resume_data.get('text_length', 0)} chars")
     
     # Skills
     if resume_data.get('skills'):
-        st.subheader("💡 Extracted Skills")
+        st.subheader("Extracted Skills")
         
         skills = resume_data.get('skills', [])
         if len(skills) > 0:
@@ -165,7 +164,7 @@ if st.session_state.candidate_resume:
         with col_job:
             job_history = exp_data.get('job_history', [])
             if job_history:
-                st.subheader("💼 Work History")
+                st.subheader("Work History")
                 for i, job in enumerate(job_history[:5]):
                     if isinstance(job, dict):
                         st.markdown(f"{i+1}. **{job.get('title', 'Position')}** at {job.get('company', 'Company')}")
@@ -174,14 +173,14 @@ if st.session_state.candidate_resume:
                 if len(job_history) > 5:
                     st.caption(f"... and {len(job_history)-5} more")
             elif exp_data.get('companies'):
-                st.subheader("💼 Companies")
+                st.subheader("Companies")
                 for company in exp_data.get('companies', [])[:5]:
                     st.markdown(f"- {company}")
         
         with col_cert:
             certifications = resume_data.get('certifications', [])
             if certifications:
-                st.subheader("📜 Certifications")
+                st.subheader("Certifications")
                 for cert in certifications[:5]:
                     st.markdown(f"- {cert}")
                 if len(certifications) > 5:
@@ -189,7 +188,7 @@ if st.session_state.candidate_resume:
     
     # Verify Information
     st.markdown("---")
-    st.header("✅ Step 3: Verify & Update Your Information")
+    st.header("Verify & Update Your Information")
     st.markdown("We use AI to extract information. Please verify and correct any inaccuracies.")
     
     # Initialize verification state
@@ -201,7 +200,7 @@ if st.session_state.candidate_resume:
         st.session_state.corrections_made = {}
     
     # Show current extracted data for review
-    with st.expander("👀 Review Extracted Information", expanded=True):
+    with st.expander("Review Extracted Information", expanded=True):
         col_rev1, col_rev2 = st.columns(2)
         
         with col_rev1:
@@ -228,7 +227,7 @@ if st.session_state.candidate_resume:
     col_verify, col_edit = st.columns(2)
     
     with col_verify:
-        if st.button("🔍 Run AI Verification", type="primary"):
+        if st.button("Run AI Verification", type="primary"):
             with st.spinner("Verifying information accuracy..."):
                 try:
                     response = requests.post(
@@ -251,7 +250,7 @@ if st.session_state.candidate_resume:
                     st.error(f"Error: {str(e)}")
     
     with col_edit:
-        if st.button("✏️ Edit My Information Manually", type="secondary"):
+        if st.button("Edit My Information Manually", type="secondary"):
             st.session_state.show_edit_form = True
             st.rerun()
     
@@ -264,7 +263,7 @@ if st.session_state.candidate_resume:
                           'file_type', 'text', 'text_length', 'saved_to_db', 'status', 'message'}
         
         st.markdown("---")
-        st.subheader("📊 Verification Results")
+        st.subheader("Verification Results")
         
         col1, col2, col3 = st.columns(3)
         
@@ -284,9 +283,9 @@ if st.session_state.candidate_resume:
             st.metric("Flagged Fields", flagged_count)
         
         if flagged_count == 0:
-            st.success("✅ All information verified successfully!")
+            st.success("All information verified successfully!")
         else:
-            st.warning(f"⚠️ {flagged_count} field(s) may need your attention")
+            st.warning(f"{flagged_count} field(s) may need your attention")
         
         # Show flagged fields with edit capability
         flagged_fields = [item for item in verification.get('flagged', []) 
@@ -294,7 +293,7 @@ if st.session_state.candidate_resume:
         
         if flagged_fields:
             st.markdown("---")
-            st.markdown("### ⚠️ Fields Needing Attention - Please Review and Correct")
+            st.markdown("### Fields Needing Attention - Please Review and Correct")
             
             for item in flagged_fields:
                 field_name = item['field']
@@ -308,11 +307,11 @@ if st.session_state.candidate_resume:
                                                                                         'filename', 'file_type', 'text', 'text_length', 
                                                                                         'saved_to_db', 'status', 'message'}]) > 0):
         st.markdown("---")
-        st.subheader("✏️ Update Your Information")
+        st.subheader("Update Your Information")
         st.markdown("Modify any incorrect information below. Changes will be used for job matching.")
         
         with st.form("correction_form"):
-            st.markdown("#### 👤 Personal Information")
+            st.markdown("#### Personal Information")
             
             col1, col2 = st.columns(2)
             
@@ -346,7 +345,7 @@ if st.session_state.candidate_resume:
                     help="Your current city/location"
                 )
             
-            st.markdown("#### 💼 Professional Experience")
+            st.markdown("#### Professional Experience")
             
             col3, col4 = st.columns(2)
             
@@ -374,7 +373,7 @@ if st.session_state.candidate_resume:
                     help="Additional months (0-11)"
                 )
             
-            st.markdown("#### 💡 Skills")
+            st.markdown("#### Skills")
             
             current_skills = resume_data.get('skills', [])
             corrected_skills = st.text_area(
@@ -384,7 +383,7 @@ if st.session_state.candidate_resume:
                 help="List your technical and professional skills, one per line"
             )
             
-            st.markdown("#### 🎓 Education")
+            st.markdown("#### Education")
             
             current_education = resume_data.get('education', [])
             if isinstance(current_education, list):
@@ -407,7 +406,7 @@ if st.session_state.candidate_resume:
                 help="List your degrees and institutions, e.g., 'Bachelor of Science - MIT'"
             )
             
-            st.markdown("#### 📜 Certifications")
+            st.markdown("#### Certifications")
             
             current_certs = resume_data.get('certifications', [])
             corrected_certs = st.text_area(
@@ -418,7 +417,7 @@ if st.session_state.candidate_resume:
             )
             
             # Submit button
-            submitted = st.form_submit_button("💾 Save All Changes", type="primary")
+            submitted = st.form_submit_button("Save All Changes", type="primary")
             
             if submitted:
                 # Parse the corrected data
@@ -455,8 +454,8 @@ if st.session_state.candidate_resume:
                     'certifications': certs_list != current_certs
                 }
                 
-                st.success("✅ Your information has been updated successfully!")
-                st.info("💡 Your updated information will now be used for job matching.")
+                st.success("Your information has been updated successfully!")
+                st.info("Your updated information will now be used for job matching.")
                 
                 # Clear the job matches so they can be recalculated with new data
                 if 'candidate_job_matches' in st.session_state:
@@ -468,7 +467,7 @@ if st.session_state.candidate_resume:
         # Show summary of corrections made
         if any(st.session_state.corrections_made.values()):
             st.markdown("---")
-            st.success("### ✅ Recent Changes")
+            st.success("### Recent Changes")
             st.markdown("You have updated the following information:")
             
             for field, changed in st.session_state.corrections_made.items():
@@ -483,7 +482,7 @@ if st.session_state.candidate_resume:
                                                    'saved_to_db', 'status', 'message'}]
         
         if verified_fields:
-            with st.expander(f"✅ Verified Fields ({len(verified_fields)})", expanded=False):
+            with st.expander(f"Verified Fields ({len(verified_fields)})", expanded=False):
                 for item in verified_fields:
                     field_name = item['field']
                     value = item.get('extraction', '')
@@ -503,7 +502,7 @@ if st.session_state.candidate_resume:
     
     # Match with Jobs
     st.markdown("---")
-    st.header("🎯 Step 4: Match with Job Openings")
+    st.header("Match with Job Openings")
     st.markdown("See how well your profile matches with available positions")
     
     # Initialize match results in session state
@@ -519,9 +518,9 @@ if st.session_state.candidate_resume:
             available_jobs = jobs_data.get('jobs', [])
             
             if not available_jobs:
-                st.info("📭 No job openings available at the moment. Please check back later!")
+                st.info("No job openings available at the moment. Please check back later!")
             else:
-                st.success(f"✅ Found {len(available_jobs)} job opening(s)")
+                st.success(f"Found {len(available_jobs)} job opening(s)")
                 
                 # Option to match against all jobs or select specific ones
                 match_option = st.radio(
@@ -560,7 +559,7 @@ if st.session_state.candidate_resume:
                 # Match button
                 if selected_jobs:
                     st.markdown("---")
-                    if st.button("🚀 Find My Best Matches", type="primary", key="match_jobs"):
+                    if st.button("Find My Best Matches", type="primary", key="match_jobs"):
                         with st.spinner(f"Analyzing matches against {len(selected_jobs)} job(s)..."):
                             try:
                                 match_results = []
@@ -589,21 +588,21 @@ if st.session_state.candidate_resume:
                                 match_results.sort(key=lambda x: x['match']['match_score'], reverse=True)
                                 
                                 st.session_state.candidate_job_matches = match_results
-                                st.success(f"✅ Matched against {len(match_results)} job(s)!")
+                                st.success(f"Matched against {len(match_results)} job(s)!")
                                 st.rerun()
                             
                             except Exception as e:
-                                st.error(f"❌ Error matching jobs: {str(e)}")
+                                st.error(f"Error matching jobs: {str(e)}")
                 
                 # Display match results
                 if st.session_state.candidate_job_matches:
                     st.markdown("---")
-                    st.header("📊 Your Job Match Results")
+                    st.header("Your Job Match Results")
                     
                     results = st.session_state.candidate_job_matches
                     
                     # Summary metrics
-                    st.subheader("📈 Overview")
+                    st.subheader("Overview")
                     col1, col2, col3, col4 = st.columns(4)
                     
                     with col1:
@@ -628,14 +627,14 @@ if st.session_state.candidate_resume:
                     
                     # Display categorized results
                     if excellent_matches:
-                        st.success(f"### 🌟 Excellent Matches ({len(excellent_matches)})")
+                        st.success(f"### Excellent Matches ({len(excellent_matches)})")
                         st.markdown("You're a great fit for these positions!")
                         
                         for result in excellent_matches:
                             job = result['job']
                             match = result['match']
                             
-                            with st.expander(f"⭐ {result['job_title']} - {match['match_score']:.1f}% Match", expanded=True):
+                            with st.expander(f"{result['job_title']} - {match['match_score']:.1f}% Match", expanded=True):
                                 col_a, col_b = st.columns([2, 1])
                                 
                                 with col_a:
@@ -644,9 +643,9 @@ if st.session_state.candidate_resume:
                                     st.markdown(f"**Education:** {job.get('required_education', 'Not specified')}")
                                     
                                     st.markdown("**Why you're a great match:**")
-                                    st.write(f"✅ Skills Match: {match['skill_match']:.1f}%")
-                                    st.write(f"✅ Experience Match: {match['experience_match']:.1f}%")
-                                    st.write(f"✅ Education Match: {match['education_match']:.1f}%")
+                                    st.write(f"Skills Match: {match['skill_match']:.1f}%")
+                                    st.write(f"Experience Match: {match['experience_match']:.1f}%")
+                                    st.write(f"Education Match: {match['education_match']:.1f}%")
                                 
                                 with col_b:
                                     st.metric("Overall Match", f"{match['match_score']:.1f}%")
@@ -654,26 +653,26 @@ if st.session_state.candidate_resume:
                                     if match.get('matched_skills'):
                                         st.markdown(f"**Matching Skills ({len(match['matched_skills'])}):**")
                                         for skill in match['matched_skills'][:5]:
-                                            st.write(f"✅ {skill}")
+                                            st.write(f"{skill}")
                                         if len(match['matched_skills']) > 5:
                                             st.caption(f"... and {len(match['matched_skills'])-5} more")
                                 
                                 if match.get('skill_gaps'):
                                     st.warning("**Skills to develop:**")
                                     for gap in match['skill_gaps']:
-                                        st.write(f"📚 {gap}")
+                                        st.write(f"{gap}")
                                 else:
-                                    st.success("🎉 You have all the required skills!")
+                                    st.success("You have all the required skills!")
                     
                     if good_matches:
-                        st.info(f"### 👍 Good Matches ({len(good_matches)})")
+                        st.info(f"### Good Matches ({len(good_matches)})")
                         st.markdown("You're qualified for these positions with some skill development.")
                         
                         for result in good_matches:
                             job = result['job']
                             match = result['match']
                             
-                            with st.expander(f"✓ {result['job_title']} - {match['match_score']:.1f}% Match"):
+                            with st.expander(f"{result['job_title']} - {match['match_score']:.1f}% Match"):
                                 col_a, col_b = st.columns(2)
                                 
                                 with col_a:
@@ -686,19 +685,19 @@ if st.session_state.candidate_resume:
                                     if match.get('skill_gaps'):
                                         st.markdown("**Skills to develop:**")
                                         for gap in match['skill_gaps'][:3]:
-                                            st.write(f"📚 {gap}")
+                                            st.write(f"{gap}")
                                         if len(match['skill_gaps']) > 3:
                                             st.caption(f"... and {len(match['skill_gaps'])-3} more")
                     
                     if fair_matches:
-                        with st.expander(f"💡 Fair Matches ({len(fair_matches)}) - Click to expand"):
+                        with st.expander(f"Fair Matches ({len(fair_matches)}) - Click to expand"):
                             st.markdown("These positions might be suitable with additional training.")
                             for result in fair_matches:
                                 match = result['match']
                                 st.write(f"• {result['job_title']} - {match['match_score']:.1f}% match")
                     
                     if low_matches:
-                        with st.expander(f"ℹ️ Other Positions ({len(low_matches)}) - Click to expand"):
+                        with st.expander(f"Other Positions ({len(low_matches)}) - Click to expand"):
                             st.markdown("These positions may require significant upskilling.")
                             for result in low_matches:
                                 match = result['match']
@@ -706,19 +705,19 @@ if st.session_state.candidate_resume:
                     
                     # Recommendations
                     st.markdown("---")
-                    st.subheader("💡 Personalized Recommendations")
+                    st.subheader("Personalized Recommendations")
                     
                     if excellent_matches:
-                        st.success("🎯 **Top Recommendation:** Apply to your excellent matches immediately!")
+                        st.success("Top Recommendation: Apply to your excellent matches immediately!")
                         top_job = excellent_matches[0]
                         st.write(f"Start with **{top_job['job_title']}** - you're a {top_job['match']['match_score']:.1f}% match!")
                     elif good_matches:
-                        st.info("📚 **Recommendation:** Focus on developing a few key skills to improve your match.")
+                        st.info("Recommendation: Focus on developing a few key skills to improve your match.")
                         top_job = good_matches[0]
                         if top_job['match'].get('skill_gaps'):
                             st.write(f"For **{top_job['job_title']}**, consider learning: {', '.join(top_job['match']['skill_gaps'][:3])}")
                     else:
-                        st.warning("💪 **Recommendation:** Consider upskilling in high-demand areas to improve your matches.")
+                        st.warning("Recommendation: Consider upskilling in high-demand areas to improve your matches.")
                         
                         # Aggregate most common missing skills
                         all_gaps = []
@@ -732,18 +731,18 @@ if st.session_state.candidate_resume:
                             for skill, count in most_common:
                                 st.write(f"• {skill} (required in {count} job(s))")
         else:
-            st.error("❌ Could not fetch jobs from database. Please try again later.")
+            st.error("Could not fetch jobs from database. Please try again later.")
     
     except Exception as e:
-        st.warning(f"⚠️ Unable to load job openings: {str(e)}")
-        st.info("💡 Please contact the administrator or try again later.")
-
+        st.warning(f"Unable to load job openings: {str(e)}")
+        st.info("Please contact the administrator or try again later.")
 # Call to action
 if not st.session_state.candidate_resume:
     st.markdown("---")
-    st.info("👆 Upload your resume above to get started!")
+    st.info("Upload your resume above to get started!")
 
 # Footer
 st.markdown("---")
 st.markdown("**Candidate Portal** | Powered by AI-based Resume Screening System")
-st.markdown("🔒 Your data is secure and used only for matching purposes")
+st.markdown("Your data is secure and used only for matching purposes")
+st.markdown("Secure • Fair • AI-Powered")
