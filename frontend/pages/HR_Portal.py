@@ -114,7 +114,7 @@ with multilang_tab_ui:
     multilang_tab.render(API_BASE_URL)
 
 with matching_tab_ui:
-    matching_tab.render(API_BASE_URL)
+    matching_tab.render(API_BASE_URL, portal_type="hr_portal")
 
 with verification_tab_ui:
     verification_tab.render(API_BASE_URL)
