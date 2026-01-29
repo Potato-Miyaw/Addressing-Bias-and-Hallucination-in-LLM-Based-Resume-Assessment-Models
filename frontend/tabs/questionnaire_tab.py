@@ -8,11 +8,11 @@ from datetime import datetime
 
 def render(api_base_url: str):
     """Render the Questionnaire Management tab"""
-    st.header("📋 Questionnaire Management")
+    st.header("Questionnaire Management")
     st.markdown("Create and send personalized questionnaires to candidates based on match results")
     
     # Sub-tabs for different functionalities
-    tab1, tab2, tab3 = st.tabs(["🎯 Generate & Send", "📊 View Questionnaires", "📥 View Responses"])
+    tab1, tab2, tab3 = st.tabs(["Generate & Send", "View Questionnaires", "View Responses"])
     
     with tab1:
         render_generate_send(api_base_url)
@@ -26,16 +26,162 @@ def render(api_base_url: str):
 
 def render_generate_send(api_base_url: str):
     """Tab 1: Generate and send questionnaires"""
-    st.subheader("🎯 Generate & Send Questionnaire")
+    st.subheader("Generate & Send Questionnaire")
     st.markdown("Select a candidate from matching results to auto-generate a personalized questionnaire")
     
     # Check if we have ranked candidates in session
+    ranked_candidates = None
+    data_source = None
+    
     if hasattr(st.session_state, 'ranked_candidates') and st.session_state.ranked_candidates:
-        st.success(f"✅ Found {len(st.session_state.ranked_candidates)} ranked candidates from matching")
+        # Session data available
+        st.success(f"Found {len(st.session_state.ranked_candidates)} ranked candidates from recent matching session")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info("Using candidates from current session. To use different candidates, load from database below.")
+        with col2:
+            if st.button("Load from Database", key="switch_to_db"):
+                # Clear session candidates to force database load
+                if hasattr(st.session_state, 'use_db_candidates'):
+                    del st.session_state.use_db_candidates
+                st.session_state.use_db_candidates = True
+                st.rerun()
+        
+        if not hasattr(st.session_state, 'use_db_candidates'):
+            ranked_candidates = st.session_state.ranked_candidates
+            data_source = "session"
+    
+    # Load from database if no session data or user chose to use database
+    if ranked_candidates is None or hasattr(st.session_state, 'use_db_candidates'):
+        st.markdown("---")
+        st.markdown("### Load Candidates from Database")
+        
+        try:
+            # Get list of jobs from database first
+            jobs_response = requests.get(f"{api_base_url}/api/data/jobs?limit=100")
+            
+            if jobs_response.status_code == 200:
+                jobs_data = jobs_response.json()
+                all_jobs = jobs_data.get('jobs', [])
+                
+                if all_jobs:
+                    st.success(f"Found {len(all_jobs)} job(s) in database")
+                    
+                    # For each job, check if it has matches
+                    jobs_with_matches = {}
+                    
+                    with st.spinner("Checking for matches..."):
+                        for job in all_jobs:
+                            job_id = job.get('job_id')
+                            if job_id:
+                                try:
+                                    matches_response = requests.get(f"{api_base_url}/api/matches/job/{job_id}")
+                                    if matches_response.status_code == 200:
+                                        matches = matches_response.json()
+                                        if matches:  # Only include jobs that have matches
+                                            jobs_with_matches[job_id] = {
+                                                'job_title': job.get('job_title', 'Untitled Position'),
+                                                'matches': matches
+                                            }
+                                except:
+                                    continue
+                    
+                    if jobs_with_matches:
+                        st.success(f"Found {len(jobs_with_matches)} job(s) with matches")
+                        
+                        # Job selector
+                        job_options = {}
+                        for job_id, job_data in jobs_with_matches.items():
+                            label = f"{job_data['job_title']} ({len(job_data['matches'])} candidates) - ID: {job_id[:12]}..."
+                            job_options[label] = {'job_id': job_id, 'matches': job_data['matches']}
+                        
+                        selected_job_key = st.selectbox(
+                            "Select Job:",
+                            options=list(job_options.keys()),
+                            key="questionnaire_job_selector"
+                        )
+                        
+                        selected_job_data = job_options[selected_job_key]
+                        
+                        col_load1, col_load2 = st.columns([1, 4])
+                        with col_load1:
+                            if st.button("Load Candidates", type="primary", key="load_candidates_btn"):
+                                with st.spinner("Loading candidates..."):
+                                    # Convert database matches to ranked_candidates format
+                                    ranked_candidates = []
+                                    for idx, match in enumerate(sorted(selected_job_data['matches'], 
+                                                                      key=lambda x: x.get('overall_match_score', 0), 
+                                                                      reverse=True), 1):
+                                        # Get resume data
+                                        resume_id = match.get('resume_id')
+                                        try:
+                                            resume_response = requests.get(f"{api_base_url}/api/resume/{resume_id}")
+                                            if resume_response.status_code == 200:
+                                                resume_data = resume_response.json()
+                                            else:
+                                                resume_data = {}
+                                        except:
+                                            resume_data = {}
+                                        
+                                        ranked_candidates.append({
+                                            'rank': idx,
+                                            'resume_id': resume_id,
+                                            'candidate_name': resume_data.get('name', 'Unknown'),
+                                            'candidate_email': resume_data.get('email', ''),
+                                            'candidate_phone': resume_data.get('phone', ''),
+                                            'resume_data': resume_data,
+                                            'match_data': {
+                                                'match_score': match.get('overall_match_score', 0),
+                                                'skill_match': match.get('match_scores', {}).get('skill_score', 0),
+                                                'skill_gaps': match.get('skill_details', {}).get('missing_skills', [])
+                                            }
+                                        })
+                                    
+                                    # Store in session for this workflow
+                                    st.session_state.db_loaded_candidates = ranked_candidates
+                                    st.session_state.rank_job_id = selected_job_data['job_id']
+                                    data_source = "database"
+                                    st.success(f"Loaded {len(ranked_candidates)} candidate(s) from database")
+                                    st.rerun()
+                        
+                        # Use loaded candidates if available
+                        if hasattr(st.session_state, 'db_loaded_candidates'):
+                            ranked_candidates = st.session_state.db_loaded_candidates
+                            data_source = "database"
+                            st.success(f"Using {len(ranked_candidates)} candidate(s) loaded from database")
+                    else:
+                        st.warning("No jobs with matches found. Please run matching first from the Matching & Ranking tab.")
+                else:
+                    st.warning("No jobs found in database. Please add a job description first.")
+            else:
+                st.error("Failed to fetch jobs from database")
+        
+        except Exception as e:
+            st.error(f"Error loading matches: {str(e)}")
+    
+    # Show candidate selection and questionnaire generation if we have candidates
+    if ranked_candidates:
+        st.markdown("---")
+        
+        # Show data source and option to clear
+        col_src1, col_src2 = st.columns([4, 1])
+        with col_src1:
+            if data_source == "session":
+                st.info(f"Using {len(ranked_candidates)} candidates from current matching session")
+            elif data_source == "database":
+                st.info(f"Using {len(ranked_candidates)} candidates loaded from database")
+        with col_src2:
+            if st.button("Clear", key="clear_candidates"):
+                if hasattr(st.session_state, 'db_loaded_candidates'):
+                    del st.session_state.db_loaded_candidates
+                if hasattr(st.session_state, 'use_db_candidates'):
+                    del st.session_state.use_db_candidates
+                st.rerun()
         
         # Candidate selection
         candidate_options = {}
-        for candidate in st.session_state.ranked_candidates:
+        for candidate in ranked_candidates:
             # Try multiple sources for name and email (match DB vs resume_data)
             name = (
                 candidate.get('candidate_name') or 
@@ -62,7 +208,7 @@ def render_generate_send(api_base_url: str):
         selected_candidate = candidate_options[selected_candidate_key]
         
         # Show candidate details
-        with st.expander("👤 Candidate Details", expanded=True):
+        with st.expander("Candidate Details", expanded=True):
             col1, col2 = st.columns(2)
             
             with col1:
@@ -89,7 +235,7 @@ def render_generate_send(api_base_url: str):
                     "Candidate Name:",
                     value=original_name if not name_is_empty else "",
                     placeholder="Enter candidate name",
-                    help="✏️ You can edit this if name is missing or incorrect",
+                    help="You can edit this if name is missing or incorrect",
                     key="edit_candidate_name"
                 )
                 
@@ -97,7 +243,7 @@ def render_generate_send(api_base_url: str):
                     "Candidate Email:",
                     value=original_email if not email_is_empty else "",
                     placeholder="candidate@example.com",
-                    help="✏️ You can edit this if email is missing or incorrect",
+                    help="You can edit this if email is missing or incorrect",
                     key="edit_candidate_email"
                 )
                 
@@ -109,16 +255,16 @@ def render_generate_send(api_base_url: str):
                 )
                 
                 candidate_phone = st.text_input(
-                    "📱 Candidate Phone (for WhatsApp):",
+                    "Candidate Phone (for WhatsApp):",
                     value=candidate_phone,
                     placeholder="+1234567890 (E.164 format)",
-                    help="✏️ Phone number for WhatsApp delivery (format: +country_code + number)",
+                    help="Phone number for WhatsApp delivery (format: +country_code + number)",
                     key="edit_candidate_phone"
                 )
                 
                 # Show warning if fields are empty
                 if not candidate_name or not candidate_email:
-                    st.warning("⚠️ Name and email are required to send questionnaire")
+                    st.warning("Name and email are required to send questionnaire")
                 
                 st.write(f"**Resume ID:** `{selected_candidate['resume_id'][:12]}...`")
             
@@ -130,14 +276,14 @@ def render_generate_send(api_base_url: str):
             
             # Skill gaps
             if selected_candidate['match_data']['skill_gaps']:
-                st.markdown("**🔴 Skill Gaps (will be questioned):**")
+                st.markdown("**Skill Gaps (will be questioned):**")
                 for gap in selected_candidate['match_data']['skill_gaps'][:5]:
                     st.write(f"  • {gap}")
         
         st.markdown("---")
         
         # Generation options
-        st.subheader("⚙️ Generation Options")
+        st.subheader("Generation Options")
         
         col1, col2, col3 = st.columns(3)
         
@@ -159,7 +305,7 @@ def render_generate_send(api_base_url: str):
         
         with col3:
             delivery_method = st.radio(
-                "📬 Delivery Method:",
+                "Delivery Method:",
                 options=["email", "whatsapp", "both"],
                 index=0,
                 help="Choose how to send the invitation link"
@@ -169,21 +315,21 @@ def render_generate_send(api_base_url: str):
         if hasattr(st.session_state, 'generated_questionnaire') and st.session_state.generated_questionnaire:
             questionnaire = st.session_state.generated_questionnaire
             
-            st.success(f"✅ Questionnaire generated with {questionnaire['total_questions']} questions")
+            st.success(f"Questionnaire generated with {questionnaire['total_questions']} questions")
             
             # Show generated questions
-            with st.expander("📝 Generated Questions", expanded=True):
+            with st.expander("Generated Questions", expanded=True):
                 for i, q in enumerate(questionnaire['questions'], 1):
                     st.markdown(f"**Q{i}:** {q['text']}")
                     if q.get('type') in ['multiple_choice', 'rating']:
                         st.write(f"   Options: {', '.join(q.get('options', []))}")
                     if q.get('generated_by'):
-                        st.caption(f"   🤖 {q['generated_by']}")
+                        st.caption(f"   Generated by: {q['generated_by']}")
                     st.markdown("")
             
             # Send invitation section
             st.markdown("---")
-            st.subheader("📧 Send Invitation")
+            st.subheader("Send Invitation")
             
             # Show delivery info based on method
             if delivery_method == "email":
@@ -195,7 +341,7 @@ def render_generate_send(api_base_url: str):
             
             col_send1, col_send2 = st.columns([1, 3])
             with col_send1:
-                if st.button("📤 Send Now", type="primary", key="send_invite_btn"):
+                if st.button("Send Now", type="primary", key="send_invite_btn"):
                     # Validate based on delivery method
                     validation_error = None
                     if delivery_method in ["email", "both"] and not candidate_email:
@@ -204,7 +350,7 @@ def render_generate_send(api_base_url: str):
                         validation_error = "Phone number is required for WhatsApp delivery"
                     
                     if validation_error:
-                        st.error(f"❌ {validation_error}")
+                        st.error(f"Error: {validation_error}")
                     else:
                         with st.spinner("Sending invitation..."):
                             job_id = getattr(st.session_state, 'rank_job_id', None)
@@ -251,10 +397,10 @@ def render_generate_send(api_base_url: str):
                                 del st.session_state.generated_questionnaire
                                 st.rerun()
                             else:
-                                st.error(f"❌ Failed to send invitation: {invite_response.text}")
+                                st.error(f"Failed to send invitation: {invite_response.text}")
             
             with col_send2:
-                if st.button("❌ Cancel", key="cancel_send"):
+                if st.button("Cancel", key="cancel_send"):
                     del st.session_state.generated_questionnaire
                     st.rerun()
         
@@ -267,23 +413,23 @@ def render_generate_send(api_base_url: str):
             # Show delivery status
             if delivery_method == "both":
                 if email_sent and whatsapp_sent:
-                    st.success(f"✅ Invitation sent successfully via Email and WhatsApp!")
+                    st.success(f"Invitation sent successfully via Email and WhatsApp!")
                 elif email_sent:
-                    st.warning(f"⚠️ Email sent successfully, but WhatsApp failed. Check Twilio configuration.")
+                    st.warning(f"Email sent successfully, but WhatsApp failed. Check Twilio configuration.")
                 elif whatsapp_sent:
-                    st.warning(f"⚠️ WhatsApp sent successfully, but Email failed. Check SMTP configuration.")
+                    st.warning(f"WhatsApp sent successfully, but Email failed. Check SMTP configuration.")
                 else:
-                    st.error(f"❌ Both Email and WhatsApp failed to send. Copy the link manually.")
+                    st.error(f"Both Email and WhatsApp failed to send. Copy the link manually.")
             elif delivery_method == "email":
                 if email_sent:
-                    st.success(f"✅ Invitation sent successfully via Email!")
+                    st.success(f"Invitation sent successfully via Email!")
                 else:
-                    st.warning(f"⚠️ Email failed to send. Check SMTP configuration or copy the link manually.")
+                    st.warning(f"Email failed to send. Check SMTP configuration or copy the link manually.")
             elif delivery_method == "whatsapp":
                 if whatsapp_sent:
-                    st.success(f"✅ Invitation sent successfully via WhatsApp!")
+                    st.success(f"Invitation sent successfully via WhatsApp!")
                 else:
-                    st.warning(f"⚠️ WhatsApp failed to send. Check Twilio configuration or copy the link manually.")
+                    st.warning(f"WhatsApp failed to send. Check Twilio configuration or copy the link manually.")
             
             # Show invitation details
             st.info(f"**Invitation Link:** {st.session_state.invitation_link}")
@@ -294,14 +440,14 @@ def render_generate_send(api_base_url: str):
             
             # Show retry options if something failed
             if not email_sent or not whatsapp_sent:
-                st.info("💡 **Tip:** Configure SMTP (email) and Twilio (WhatsApp) settings in `.env` file. See `.env.example` and `EMAIL_SETUP.md` for instructions.")
+                st.info("**Tip:** Configure SMTP (email) and Twilio (WhatsApp) settings in `.env` file. See `.env.example` and `EMAIL_SETUP.md` for instructions.")
                 
                 # Resend buttons
                 col_resend1, col_resend2, col_resend3 = st.columns(3)
                 
                 if delivery_method in ["email", "both"] and not email_sent:
                     with col_resend1:
-                        if st.button("🔄 Retry Email", key="resend_email_btn", type="secondary"):
+                        if st.button("Retry Email", key="resend_email_btn", type="secondary"):
                             with st.spinner("Retrying email..."):
                                 resend_response = requests.post(
                                     f"{api_base_url}/api/questionnaire/resend-email",
@@ -328,11 +474,11 @@ def render_generate_send(api_base_url: str):
                 
                 if delivery_method in ["whatsapp", "both"] and not whatsapp_sent:
                     with col_resend2:
-                        if st.button("🔄 Retry WhatsApp", key="resend_whatsapp_btn", type="secondary"):
-                            st.info("💡 WhatsApp retry coming soon! For now, copy the link and send manually.")
+                        if st.button("Retry WhatsApp", key="resend_whatsapp_btn", type="secondary"):
+                            st.info("WhatsApp retry coming soon! For now, copy the link and send manually.")
             
             # Clear button
-            if st.button("✅ Done - Generate Another", key="clear_result"):
+            if st.button("Done - Generate Another", key="clear_result"):
                 # Clean up all session state
                 for key in ['invitation_sent', 'invitation_link', 'invitation_token', 
                            'questionnaire_title', 'email_sent', 'whatsapp_sent', 'delivery_method', 
@@ -343,15 +489,15 @@ def render_generate_send(api_base_url: str):
                 st.rerun()
         
         # Generate button (only show if no questionnaire in progress)
-        elif st.button("🚀 Generate Questionnaire", type="primary", key="generate_btn"):
+        elif st.button("Generate Questionnaire", type="primary", key="generate_btn"):
             # Validate name and email
             if not candidate_name or not candidate_email:
-                st.error("❌ Please enter both candidate name and email before generating questionnaire")
+                st.error("Please enter both candidate name and email before generating questionnaire")
                 return
             
             # Basic email validation
             if '@' not in candidate_email or '.' not in candidate_email:
-                st.error("❌ Please enter a valid email address")
+                st.error("Please enter a valid email address")
                 return
             
             with st.spinner("Generating questionnaire with SmolLM2..."):
@@ -362,7 +508,7 @@ def render_generate_send(api_base_url: str):
                     resume_id = selected_candidate['resume_id']
                     
                     if not job_id:
-                        st.error("❌ Job ID not found. Please re-run matching first.")
+                        st.error("Job ID not found. Please re-run matching first.")
                         return
                     
                     # Fetch matches to find match_id
@@ -377,7 +523,7 @@ def render_generate_send(api_base_url: str):
                                 break
                     
                     if not match_id:
-                        st.error("❌ Match record not found. Please re-run matching first.")
+                        st.error("Match record not found. Please re-run matching first.")
                         return
                     
                     # Generate questionnaire
@@ -397,18 +543,15 @@ def render_generate_send(api_base_url: str):
                         st.session_state.generated_questionnaire = questionnaire
                         st.rerun()
                     else:
-                        st.error(f"❌ Failed to generate questionnaire: {gen_response.text}")
+                        st.error(f"Failed to generate questionnaire: {gen_response.text}")
                 
                 except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-    
-    else:
-        st.info("📊 No ranked candidates found. Please go to **Matching & Ranking** tab first to match candidates with a job.")
+                    st.error(f"Error: {str(e)}")
 
 
 def render_view_questionnaires(api_base_url: str):
     """Tab 2: View existing questionnaires"""
-    st.subheader("📊 All Questionnaires")
+    st.subheader("All Questionnaires")
     
     try:
         response = requests.get(f"{api_base_url}/api/questionnaire/?limit=50")
@@ -418,7 +561,7 @@ def render_view_questionnaires(api_base_url: str):
             questionnaires = data.get('questionnaires', [])
             
             if questionnaires:
-                st.success(f"✅ Found {len(questionnaires)} questionnaire(s)")
+                st.success(f"Found {len(questionnaires)} questionnaire(s)")
                 
                 # Create DataFrame
                 df_data = []
@@ -453,7 +596,7 @@ def render_view_questionnaires(api_base_url: str):
                 
                 selected_q = q_options[selected_q_key]
                 
-                with st.expander("📋 Questions", expanded=True):
+                with st.expander("Questions", expanded=True):
                     for i, q in enumerate(selected_q['questions'], 1):
                         st.markdown(f"**Q{i}:** {q['text']}")
                         st.caption(f"Type: {q['type']} | Required: {q['required']} | Category: {q.get('category', 'N/A')}")
@@ -465,7 +608,7 @@ def render_view_questionnaires(api_base_url: str):
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    if st.button("📧 View Invitations"):
+                    if st.button("View Invitations"):
                         inv_response = requests.get(
                             f"{api_base_url}/api/questionnaire/invitations/{selected_q['questionnaire_id']}"
                         )
@@ -473,11 +616,11 @@ def render_view_questionnaires(api_base_url: str):
                             invitations = inv_response.json()['invitations']
                             st.write(f"**{len(invitations)} invitation(s) sent:**")
                             for inv in invitations:
-                                status = "✅ Used" if inv['used'] else "⏳ Pending"
+                                status = "Used" if inv['used'] else "Pending"
                                 st.write(f"• {inv['candidate_name']} ({inv['candidate_email']}) - {status}")
                 
                 with col2:
-                    if st.button("📥 View Responses"):
+                    if st.button("View Responses"):
                         resp_response = requests.get(
                             f"{api_base_url}/api/questionnaire/responses/{selected_q['questionnaire_id']}"
                         )
@@ -487,17 +630,17 @@ def render_view_questionnaires(api_base_url: str):
                             for resp in responses:
                                 st.write(f"• {resp['candidate_name']} - {resp['submitted_at'][:10]}")
             else:
-                st.info("📝 No questionnaires created yet")
+                st.info("No questionnaires created yet")
         else:
-            st.error("❌ Failed to fetch questionnaires")
+            st.error("Failed to fetch questionnaires")
     
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        st.error(f"Error: {str(e)}")
 
 
 def render_view_responses(api_base_url: str):
     """Tab 3: View candidate responses"""
-    st.subheader("📥 Candidate Responses")
+    st.subheader("Candidate Responses")
     
     try:
         # Get all questionnaires
@@ -529,7 +672,7 @@ def render_view_responses(api_base_url: str):
                     responses = resp_response.json()['responses']
                     
                     if responses:
-                        st.success(f"✅ {len(responses)} response(s) received")
+                        st.success(f"{len(responses)} response(s) received")
                         
                         # Select response to view
                         resp_options = {
@@ -547,17 +690,17 @@ def render_view_responses(api_base_url: str):
                         
                         # Display response header
                         st.markdown("---")
-                        st.markdown(f"### 📄 {selected_resp['candidate_name']}")
-                        st.caption(f"📧 {selected_resp['candidate_email']} | ⏰ Submitted: {selected_resp['submitted_at'][:16]}")
+                        st.markdown(f"### {selected_resp['candidate_name']}")
+                        st.caption(f"{selected_resp['candidate_email']} | Submitted: {selected_resp['submitted_at'][:16]}")
                         
                         # ML Prediction Section (Compact)
                         col_pred1, col_pred2 = st.columns([3, 1])
                         
                         with col_pred1:
-                            st.markdown("#### 🤖 AI Hiring Prediction")
+                            st.markdown("#### AI Hiring Prediction")
                         
                         with col_pred2:
-                            if st.button("🔄 Analyze", key="get_prediction_btn", use_container_width=True):
+                            if st.button("Analyze", key="get_prediction_btn", use_container_width=True):
                                 with st.spinner("Analyzing..."):
                                     try:
                                         pred_response = requests.post(
@@ -609,7 +752,7 @@ def render_view_responses(api_base_url: str):
                         st.markdown("---")
                         
                         # Combined Questions, Answers, and Ratings
-                        st.markdown("### 📝 Review Answers & Rate Performance")
+                        st.markdown("### Review Answers & Rate Performance")
                         
                         with st.form(key="rating_form"):
                             ratings = []
@@ -653,7 +796,7 @@ def render_view_responses(api_base_url: str):
                                 st.markdown("---")
                             
                             # Submit button
-                            if st.form_submit_button("💾 Save All Ratings", type="primary", use_container_width=True):
+                            if st.form_submit_button("Save All Ratings", type="primary", use_container_width=True):
                                 feedback_data = {
                                     "response_id": selected_resp['response_id'],
                                     "question_ratings": ratings
@@ -675,7 +818,7 @@ def render_view_responses(api_base_url: str):
                         st.markdown("---")
                         
                         # Hiring Outcome Section (Compact)
-                        st.markdown("### 🎯 Final Hiring Decision")
+                        st.markdown("### Final Hiring Decision")
                         
                         col_out1, col_out2 = st.columns([2, 3])
                         
@@ -694,7 +837,7 @@ def render_view_responses(api_base_url: str):
                                 key="outcome_notes"
                             )
                         
-                        if st.button("📥 Submit Decision", type="primary", key="submit_outcome_btn", use_container_width=True):
+                        if st.button("Submit Decision", type="primary", key="submit_outcome_btn", use_container_width=True):
                             outcome_data = {
                                 "response_id": selected_resp['response_id'],
                                 "outcome": outcome,
@@ -715,11 +858,11 @@ def render_view_responses(api_base_url: str):
                             except Exception as e:
                                 st.error(f"❌ Error: {str(e)}")
                     else:
-                        st.info("📭 No responses received yet")
+                        st.info("No responses received yet")
             else:
-                st.info("📝 No questionnaires created yet")
+                st.info("No questionnaires created yet")
         else:
-            st.error("❌ Failed to fetch questionnaires")
+            st.error("Failed to fetch questionnaires")
     
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        st.error(f"Error: {str(e)}")
