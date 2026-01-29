@@ -23,11 +23,15 @@ from backend.database import (
     save_response,
     get_response_by_token,
     get_responses_by_questionnaire,
-    get_match
+    get_match,
+    MONGODB_URL,
+    DATABASE_NAME
 )
 from backend.services.question_generator import generate_questionnaire
 from backend.services.email_service import get_email_service
 from backend.services.whatsapp_service import get_whatsapp_service
+from backend.services.answer_analyzer import get_answer_analyzer
+from backend.services.hiring_predictor import get_hiring_predictor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/questionnaire", tags=["Questionnaire"])
@@ -450,6 +454,16 @@ async def submit_response(request: ResponseSubmit):
             "submitted_at": datetime.utcnow()
         }
         
+        # Extract ML features from answers
+        try:
+            analyzer = get_answer_analyzer()
+            ml_features = analyzer.analyze_response(request.answers)
+            response_data['ml_features'] = ml_features
+            logger.info(f"✅ ML features extracted: quality_score={ml_features['overall_quality_score']:.1f}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to extract ML features: {e}")
+            # Continue without ML features
+        
         # Save response
         success = await save_response(response_data)
         if not success:
@@ -605,3 +619,204 @@ async def whatsapp_status():
             "TWILIO_WHATSAPP_NUMBER"
         ]
     }
+
+
+# ==================== ML PREDICTION ENDPOINTS ====================
+
+@router.post("/predict/{response_id}")
+async def predict_hiring_outcome(response_id: str):
+    """
+    Get ML-based hiring prediction for a candidate response.
+    
+    Returns hire probability, recommendation, confidence level, and feature explanations.
+    """
+    try:
+        # Use synchronous MongoDB client for prediction
+        from pymongo import MongoClient
+        client = MongoClient(MONGODB_URL)
+        db = client[DATABASE_NAME]
+        responses_collection = db['questionnaire_responses']
+        
+        # Get response with ML features
+        response = responses_collection.find_one({"response_id": response_id})
+        
+        if not response:
+            raise HTTPException(404, f"Response not found: {response_id}")
+        
+        ml_features = response.get('ml_features')
+        if not ml_features:
+            raise HTTPException(400, "Response does not have ML features. Features are extracted on submission.")
+        
+        # Get prediction from hiring predictor
+        predictor = get_hiring_predictor()
+        prediction = predictor.predict(ml_features)
+        
+        return {
+            "success": True,
+            "response_id": response_id,
+            "candidate_name": response.get('candidate_name'),
+            "candidate_email": response.get('candidate_email'),
+            "prediction": prediction
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(500, f"Prediction failed: {str(e)}")
+
+
+class FeedbackRequest(BaseModel):
+    """HR feedback on candidate response"""
+    response_id: str
+    question_ratings: List[Dict[str, Any]] = Field(
+        ...,
+        description="List of {question_id, rating (1-5), category, generated_by}"
+    )
+
+
+@router.post("/feedback")
+async def submit_feedback(request: FeedbackRequest):
+    """
+    Submit HR feedback/ratings for a candidate response.
+    Stores ratings in question_analytics collection for future analysis.
+    """
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(MONGODB_URL)
+        db = client[DATABASE_NAME]
+        analytics_collection = db['question_analytics']
+        responses_collection = db['questionnaire_responses']
+        
+        # Verify response exists
+        response = responses_collection.find_one({"response_id": request.response_id})
+        if not response:
+            raise HTTPException(404, f"Response not found: {request.response_id}")
+        
+        # Create or update analytics record
+        analytics_data = {
+            "response_id": request.response_id,
+            "question_ratings": request.question_ratings,
+            "submitted_at": datetime.utcnow()
+        }
+        
+        result = analytics_collection.update_one(
+            {"response_id": request.response_id},
+            {"$set": analytics_data},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": "Feedback submitted successfully",
+            "response_id": request.response_id,
+            "ratings_count": len(request.question_ratings)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Feedback submission error: {e}")
+        raise HTTPException(500, f"Failed to submit feedback: {str(e)}")
+
+
+class OutcomeRequest(BaseModel):
+    """Hiring outcome for a candidate"""
+    response_id: str
+    outcome: str = Field(..., pattern="^(hired|rejected|pending)$")
+    notes: Optional[str] = None
+
+
+@router.post("/outcome")
+async def submit_outcome(request: OutcomeRequest):
+    """
+    Submit final hiring outcome for a candidate.
+    This labeled data is used to retrain and improve the ML model.
+    """
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(MONGODB_URL)
+        db = client[DATABASE_NAME]
+        analytics_collection = db['question_analytics']
+        responses_collection = db['questionnaire_responses']
+        
+        # Verify response exists
+        response = responses_collection.find_one({"response_id": request.response_id})
+        if not response:
+            raise HTTPException(404, f"Response not found: {request.response_id}")
+        
+        # Update analytics with outcome
+        result = analytics_collection.update_one(
+            {"response_id": request.response_id},
+            {
+                "$set": {
+                    "outcome": request.outcome,
+                    "outcome_notes": request.notes,
+                    "outcome_submitted_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": f"Outcome '{request.outcome}' recorded successfully",
+            "response_id": request.response_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Outcome submission error: {e}")
+        raise HTTPException(500, f"Failed to submit outcome: {str(e)}")
+
+
+@router.get("/analytics")
+async def get_analytics():
+    """
+    Get analytics data: question ratings, hiring outcomes, and model performance.
+    """
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(MONGODB_URL)
+        db = client[DATABASE_NAME]
+        analytics_collection = db['question_analytics']
+        
+        # Get all analytics records
+        analytics = list(analytics_collection.find({}, {"_id": 0}))
+        
+        # Calculate summary statistics
+        total_responses = len(analytics)
+        outcomes = {"hired": 0, "rejected": 0, "pending": 0}
+        avg_ratings = {}
+        
+        for record in analytics:
+            outcome = record.get('outcome', 'pending')
+            outcomes[outcome] = outcomes.get(outcome, 0) + 1
+            
+            # Aggregate question ratings
+            for rating in record.get('question_ratings', []):
+                q_id = rating.get('question_id')
+                score = rating.get('rating', 0)
+                if q_id:
+                    if q_id not in avg_ratings:
+                        avg_ratings[q_id] = []
+                    avg_ratings[q_id].append(score)
+        
+        # Calculate averages
+        for q_id in avg_ratings:
+            ratings = avg_ratings[q_id]
+            avg_ratings[q_id] = sum(ratings) / len(ratings) if ratings else 0
+        
+        return {
+            "success": True,
+            "total_responses": total_responses,
+            "outcomes": outcomes,
+            "avg_question_ratings": avg_ratings,
+            "analytics_records": analytics
+        }
+        
+    except Exception as e:
+        logger.error(f"Analytics error: {e}")
+        raise HTTPException(500, f"Failed to fetch analytics: {str(e)}")
+

@@ -545,15 +545,175 @@ def render_view_responses(api_base_url: str):
                         
                         selected_resp = resp_options[selected_resp_key]
                         
-                        # Display answers
+                        # Display response header
                         st.markdown("---")
-                        st.markdown(f"### 📄 Response from {selected_resp['candidate_name']}")
-                        st.caption(f"Submitted: {selected_resp['submitted_at']}")
+                        st.markdown(f"### 📄 {selected_resp['candidate_name']}")
+                        st.caption(f"📧 {selected_resp['candidate_email']} | ⏰ Submitted: {selected_resp['submitted_at'][:16]}")
                         
-                        for answer in selected_resp['answers']:
-                            st.markdown(f"**Q:** {answer.get('question_text', answer['question_id'])}")
-                            st.write(f"**A:** {answer['answer']}")
-                            st.markdown("")
+                        # ML Prediction Section (Compact)
+                        col_pred1, col_pred2 = st.columns([3, 1])
+                        
+                        with col_pred1:
+                            st.markdown("#### 🤖 AI Hiring Prediction")
+                        
+                        with col_pred2:
+                            if st.button("🔄 Analyze", key="get_prediction_btn", use_container_width=True):
+                                with st.spinner("Analyzing..."):
+                                    try:
+                                        pred_response = requests.post(
+                                            f"{api_base_url}/api/questionnaire/predict/{selected_resp['response_id']}"
+                                        )
+                                        
+                                        if pred_response.status_code == 200:
+                                            result = pred_response.json()
+                                            st.session_state.ml_prediction = result['prediction']
+                                            st.rerun()
+                                        else:
+                                            st.error(f"❌ Failed: {pred_response.text}")
+                                    except Exception as e:
+                                        st.error(f"❌ Error: {str(e)}")
+                        
+                        # Show prediction if available
+                        if hasattr(st.session_state, 'ml_prediction'):
+                            prediction = st.session_state.ml_prediction
+                            
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                hire_prob = prediction['hire_probability']
+                                st.metric("Hire Probability", f"{hire_prob*100:.1f}%")
+                            
+                            with col2:
+                                confidence = prediction['confidence'].upper()
+                                confidence_icon = {'HIGH': '🟢', 'MODERATE': '🟡', 'LOW': '🟠', 'NONE': '⚪'}
+                                st.metric("Confidence", f"{confidence_icon.get(confidence, '')} {confidence}")
+                            
+                            with col3:
+                                recommendation = prediction['recommendation']
+                                rec_display = {
+                                    'strongly_recommend_hire': '✅ Strong Hire',
+                                    'recommend_hire': '👍 Hire',
+                                    'borderline': '🤔 Borderline',
+                                    'recommend_reject': '👎 Reject',
+                                    'strongly_recommend_reject': '❌ Strong Reject'
+                                }
+                                st.metric("Recommendation", rec_display.get(recommendation, recommendation))
+                            
+                            with st.expander("📊 View Details"):
+                                st.info(prediction['recommendation_text'])
+                                if prediction.get('top_features'):
+                                    st.markdown("**Top Features:**")
+                                    for feat in prediction['top_features'][:3]:
+                                        st.write(f"• {feat['name']}: {feat['value']:.1f}")
+                        
+                        st.markdown("---")
+                        
+                        # Combined Questions, Answers, and Ratings
+                        st.markdown("### 📝 Review Answers & Rate Performance")
+                        
+                        with st.form(key="rating_form"):
+                            ratings = []
+                            
+                            for i, answer in enumerate(selected_resp['answers']):
+                                # Question header
+                                st.markdown(f"**Question {i+1}**")
+                                st.markdown(f"_{answer.get('question_text', answer['question_id'])}_")
+                                
+                                # Answer in a nice box
+                                st.text_area(
+                                    "Answer:",
+                                    value=answer['answer'],
+                                    height=80,
+                                    disabled=True,
+                                    key=f"answer_display_{i}",
+                                    label_visibility="collapsed"
+                                )
+                                
+                                # Rating inline
+                                col_rate1, col_rate2 = st.columns([3, 1])
+                                with col_rate1:
+                                    rating = st.select_slider(
+                                        "Rating:",
+                                        options=[1, 2, 3, 4, 5],
+                                        value=3,
+                                        key=f"rating_{i}",
+                                        label_visibility="collapsed"
+                                    )
+                                with col_rate2:
+                                    rating_emoji = {1: "😞", 2: "😐", 3: "🙂", 4: "😊", 5: "🤩"}
+                                    st.markdown(f"<h2 style='text-align: center; margin-top: -10px;'>{rating_emoji[rating]}</h2>", unsafe_allow_html=True)
+                                
+                                ratings.append({
+                                    "question_id": answer['question_id'],
+                                    "rating": rating,
+                                    "category": answer.get('category', 'general'),
+                                    "generated_by": answer.get('generated_by', 'template')
+                                })
+                                
+                                st.markdown("---")
+                            
+                            # Submit button
+                            if st.form_submit_button("💾 Save All Ratings", type="primary", use_container_width=True):
+                                feedback_data = {
+                                    "response_id": selected_resp['response_id'],
+                                    "question_ratings": ratings
+                                }
+                                
+                                try:
+                                    feedback_resp = requests.post(
+                                        f"{api_base_url}/api/questionnaire/feedback",
+                                        json=feedback_data
+                                    )
+                                    
+                                    if feedback_resp.status_code == 200:
+                                        st.success("✅ Ratings saved successfully!")
+                                    else:
+                                        st.error(f"❌ Failed to save ratings: {feedback_resp.text}")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {str(e)}")
+                        
+                        st.markdown("---")
+                        
+                        # Hiring Outcome Section (Compact)
+                        st.markdown("### 🎯 Final Hiring Decision")
+                        
+                        col_out1, col_out2 = st.columns([2, 3])
+                        
+                        with col_out1:
+                            outcome = st.selectbox(
+                                "Decision:",
+                                options=["pending", "hired", "rejected"],
+                                index=0,
+                                key="outcome_selector"
+                            )
+                        
+                        with col_out2:
+                            outcome_notes = st.text_input(
+                                "Notes:",
+                                placeholder="Optional notes about decision...",
+                                key="outcome_notes"
+                            )
+                        
+                        if st.button("📥 Submit Decision", type="primary", key="submit_outcome_btn", use_container_width=True):
+                            outcome_data = {
+                                "response_id": selected_resp['response_id'],
+                                "outcome": outcome,
+                                "notes": outcome_notes
+                            }
+                            
+                            try:
+                                outcome_resp = requests.post(
+                                    f"{api_base_url}/api/questionnaire/outcome",
+                                    json=outcome_data
+                                )
+                                
+                                if outcome_resp.status_code == 200:
+                                    st.success(f"✅ Decision '{outcome}' recorded!")
+                                    st.info("💡 This data helps improve the ML model.")
+                                else:
+                                    st.error(f"❌ Failed: {outcome_resp.text}")
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
                     else:
                         st.info("📭 No responses received yet")
             else:
