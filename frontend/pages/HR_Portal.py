@@ -12,7 +12,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 # Import tab modules
-from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab, multilang_tab
+from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab, multilang_tab, questionnaire_tab
 
 
 
@@ -87,6 +87,7 @@ tabs = st.tabs([
     "📋 Resumes", 
     "🌍 Multi-Language", # Moved here
     "🎯 Matching & Ranking",
+    "📋 Questionnaire",  # NEW
     "✅ Verification",
     "🚀 Complete Pipeline",
     "🎓 HR Feedback",
@@ -97,7 +98,8 @@ tabs = st.tabs([
     job_description_tab_ui, 
     resumes_tab_ui, 
     multilang_tab_ui, 
-    matching_tab_ui, 
+    matching_tab_ui,
+    questionnaire_tab_ui,  # NEW
     verification_tab_ui, 
     pipeline_tab_ui, 
     feedback_tab_ui, 
@@ -115,6 +117,9 @@ with multilang_tab_ui:
 
 with matching_tab_ui:
     matching_tab.render(API_BASE_URL, portal_type="hr_portal")
+
+with questionnaire_tab_ui:
+    questionnaire_tab.render(API_BASE_URL)
 
 with verification_tab_ui:
     verification_tab.render(API_BASE_URL)

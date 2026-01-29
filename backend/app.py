@@ -31,7 +31,8 @@ from backend.routers import (
     notification_router,
     multilang_router,# Feature 6
     data_router,   # Data queries
-    match_router   # Match CRUD operations
+    match_router,   # Match CRUD operations
+    questionnaire_router  # Questionnaire system
 )
 
 # Initialize FastAPI
@@ -74,6 +75,7 @@ app.include_router(feedback_router.router)
 app.include_router(notification_router.router)
 app.include_router(data_router.router)  # Data queries
 app.include_router(match_router.router)  # Match CRUD operations
+app.include_router(questionnaire_router.router)  # Questionnaire system
 
 # Health check
 @app.get("/")
