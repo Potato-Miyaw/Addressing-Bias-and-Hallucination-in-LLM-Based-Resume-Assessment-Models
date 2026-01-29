@@ -5,7 +5,7 @@ import requests
 
 def render(api_base_url: str):
     """Render the Job Description Analysis tab"""
-    st.header("📄 Job Description Analysis")
+    st.header("Job Description Analysis")
     
     # Add option to load existing job or create new
     st.subheader("Load Existing Job from Database")
@@ -38,9 +38,9 @@ def render(api_base_url: str):
                     col_load, col_details = st.columns([1, 3])
                     
                     with col_load:
-                        if st.button("📥 Load This Job", type="primary"):
+                        if st.button("Load This Job", type="primary"):
                             st.session_state.jd_data = selected_job
-                            st.success(f"✅ Loaded: {selected_job['job_title']}")
+                            st.success(f"Loaded: {selected_job['job_title']}")
                             st.rerun()
                     
                     with col_details:
@@ -76,9 +76,9 @@ Requirements:
 """
         )
         
-        save_to_db = st.checkbox("💾 Save to Database", value=True, help="Save this job description for future use")
+        save_to_db = st.checkbox("Save to Database", value=True, help="Save this job description for future use")
         
-        if st.button("🔍 Analyze Job Description", type="primary"):
+        if st.button("Analyze Job Description", type="primary"):
             if jd_text:
                 with st.spinner("Analyzing job description..."):
                     try:
@@ -96,12 +96,12 @@ Requirements:
                             st.session_state.jd_data = result
                             
                             if result.get('saved_to_db'):
-                                st.success(f"✅ Job analyzed and saved to database! ID: `{result['job_id'][:16]}...`")
+                                st.success(f"Job analyzed and saved to database! ID: `{result['job_id'][:16]}...`")
                             elif result.get('duplicate_warning'):
-                                st.warning(f"⚠️ {result['duplicate_warning']}")
+                                st.warning(f"{result['duplicate_warning']}")
                                 st.info("Job analyzed but not saved (duplicate content detected)")
                             else:
-                                st.success("✅ Job analyzed successfully!")
+                                st.success("Job analyzed successfully!")
                             
                             st.rerun()
                         else:
@@ -113,7 +113,7 @@ Requirements:
     
     with col2:
         if st.session_state.jd_data:
-            st.subheader("📊 Extracted Requirements")
+            st.subheader("Extracted Requirements")
             
             data = st.session_state.jd_data
             

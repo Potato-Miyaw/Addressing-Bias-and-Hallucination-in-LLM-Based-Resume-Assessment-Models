@@ -5,7 +5,7 @@ import requests
 
 def render(api_base_url: str):
     """Render the HR Feedback tab"""
-    st.header("🎓 HR Feedback & Corrections")
+    st.header("HR Feedback & Corrections")
     st.markdown("Submit corrections to improve NER accuracy. System learns patterns automatically!")
     
     # Get feedback stats first
@@ -25,7 +25,7 @@ def render(api_base_url: str):
     # Display stats if available
     if feedback_stats:
         st.markdown("---")
-        st.subheader("📊 Current Feedback Statistics")
+        st.subheader("Current Feedback Statistics")
         
         st.metric("Total Corrections", feedback_stats['total_corrections'])
         
@@ -52,13 +52,13 @@ def render(api_base_url: str):
     # Two modes: Select from uploaded resumes or manual entry
     feedback_mode = st.radio(
         "Feedback Mode",
-        ["📋 Review Uploaded Resumes", "✏️ Manual Entry"],
+        ["Review Uploaded Resumes", "Manual Entry"],
         horizontal=True
     )
     
-    if feedback_mode == "📋 Review Uploaded Resumes":
+    if feedback_mode == "Review Uploaded Resumes":
         if not st.session_state.resumes_data:
-            st.warning("⚠️ No resumes uploaded yet. Please upload resumes in the 'Resumes' tab first.")
+            st.warning("No resumes uploaded yet. Please upload resumes in the 'Resumes' tab first.")
         else:
             st.subheader("Review & Correct Resume Extractions")
             
@@ -83,7 +83,7 @@ def render(api_base_url: str):
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### 👤 Name")
+                st.markdown("### Name")
                 current_name = resume_data.get('name', 'Unknown')
                 st.info(f"Extracted: **{current_name}**")
                 
@@ -93,7 +93,7 @@ def render(api_base_url: str):
                     key=f"name_{selected_idx}"
                 )
                 
-                st.markdown("### 📧 Email")
+                st.markdown("### Email")
                 current_email = resume_data.get('email', 'unknown@email.com')
                 st.info(f"Extracted: **{current_email}**")
                 
@@ -104,7 +104,7 @@ def render(api_base_url: str):
                 )
             
             with col2:
-                st.markdown("### 📞 Phone")
+                st.markdown("### Phone")
                 current_phone = resume_data.get('phone', '') or 'Not found'
                 st.info(f"Extracted: **{current_phone}**")
                 
@@ -117,7 +117,7 @@ def render(api_base_url: str):
             st.markdown("---")
             
             # Submit corrections
-            if st.button("✅ Submit Corrections", type="primary", key=f"submit_{selected_idx}"):
+            if st.button("Submit Corrections", type="primary", key=f"submit_{selected_idx}"):
                 corrections_submitted = []
                 
                 # Check which fields need correction
@@ -143,7 +143,7 @@ def render(api_base_url: str):
                     })
                 
                 if not corrections_submitted:
-                    st.info("ℹ️ No corrections to submit. All fields are correct!")
+                    st.info("No corrections to submit. All fields are correct!")
                 else:
                     with st.spinner("Submitting corrections..."):
                         success_count = 0
@@ -175,18 +175,18 @@ def render(api_base_url: str):
                                     elif correction['field'] == 'phone':
                                         resume_data['phone'] = correction['correct']
                                 else:
-                                    st.error(f"❌ Failed to submit {correction['field']}: {response.text}")
+                                    st.error(f"Failed to submit {correction['field']}: {response.text}")
                             
                             except Exception as e:
-                                st.error(f"❌ Error submitting {correction['field']}: {str(e)}")
+                                st.error(f"Error submitting {correction['field']}: {str(e)}")
                         
                         if success_count > 0:
-                            st.success(f"✅ Successfully submitted {success_count} correction(s)!")
+                            st.success(f"Successfully submitted {success_count} correction(s)!")
                             
                             # Show what was learned
                             for result in results:
                                 if result.get('learned_pattern'):
-                                    st.info(f"🎓 Learned new pattern for {result['field']}!")
+                                    st.info(f"Learned new pattern for {result['field']}!")
                             
                             # Update session state
                             st.session_state.resumes_data[selected_idx]['data'] = resume_data
@@ -195,7 +195,7 @@ def render(api_base_url: str):
                             st.rerun()
     
     else:  # Manual Entry Mode
-        st.subheader("✏️ Manual Correction Entry")
+        st.subheader("Manual Correction Entry")
         st.markdown("Manually enter corrections for NER improvements")
         
         with st.form("manual_correction_form"):
@@ -229,11 +229,11 @@ def render(api_base_url: str):
                     placeholder="e.g., RES_001"
                 )
             
-            submitted = st.form_submit_button("✅ Submit Manual Correction", type="primary")
+            submitted = st.form_submit_button("Submit Manual Correction", type="primary")
             
             if submitted:
                 if not manual_extracted or not manual_correct or not manual_resume_text:
-                    st.error("❌ Please fill all required fields")
+                    st.error("Please fill all required fields")
                 else:
                     with st.spinner("Submitting correction..."):
                         try:
@@ -250,31 +250,31 @@ def render(api_base_url: str):
                             
                             if response.status_code == 200:
                                 result = response.json()
-                                st.success("✅ Correction submitted successfully!")
+                                st.success("Correction submitted successfully!")
                                 
                                 if result.get('learned_pattern'):
-                                    st.info(f"🎓 Learned new pattern: {result['learned_pattern'][:80]}...")
+                                    st.info(f"Learned new pattern: {result['learned_pattern'][:80]}...")
                                 
-                                st.info(f"📊 Total {result['field']} corrections: {result['correction_count']}")
-                                st.info(f"📚 Total {result['field']} patterns: {result['total_patterns']}")
+                                st.info(f"Total {result['field']} corrections: {result['correction_count']}")
+                                st.info(f"Total {result['field']} patterns: {result['total_patterns']}")
                                 
                                 st.balloons()
                                 st.rerun()
                             else:
-                                st.error(f"❌ Failed: {response.text}")
+                                st.error(f"Failed: {response.text}")
                         
                         except Exception as e:
-                            st.error(f"❌ Error: {str(e)}")
+                            st.error(f"Error: {str(e)}")
     
     # Show learned patterns
     st.markdown("---")
-    st.subheader("📚 Learned Patterns")
+    st.subheader("Learned Patterns")
     
     if learned_patterns:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown("**👤 Name Patterns**")
+            st.markdown("Name Patterns")
             name_patterns = learned_patterns.get('name_patterns', [])
             if name_patterns:
                 for i, pattern in enumerate(name_patterns[:5], 1):
@@ -284,7 +284,7 @@ def render(api_base_url: str):
                 st.info("No patterns yet")
         
         with col2:
-            st.markdown("**📧 Email Patterns**")
+            st.markdown("Email Patterns")
             email_patterns = learned_patterns.get('email_patterns', [])
             if email_patterns:
                 for i, pattern in enumerate(email_patterns[:5], 1):
@@ -294,7 +294,7 @@ def render(api_base_url: str):
                 st.info("No patterns yet")
         
         with col3:
-            st.markdown("**📞 Phone Patterns**")
+            st.markdown("Phone Patterns")
             phone_patterns = learned_patterns.get('phone_patterns', [])
             if phone_patterns:
                 for i, pattern in enumerate(phone_patterns[:5], 1):
@@ -303,11 +303,11 @@ def render(api_base_url: str):
             else:
                 st.info("No patterns yet")
     else:
-        st.info("ℹ️ No patterns learned yet. Submit corrections to start learning!")
+        st.info("No patterns learned yet. Submit corrections to start learning!")
     
     # Test patterns
     st.markdown("---")
-    st.subheader("🧪 Test Learned Patterns")
+    st.subheader("Test Learned Patterns")
     
     with st.form("test_pattern_form"):
         test_field = st.selectbox("Field to Test", ["name", "email", "phone"])
@@ -317,7 +317,7 @@ def render(api_base_url: str):
             height=100
         )
         
-        test_submitted = st.form_submit_button("🔍 Test Patterns")
+        test_submitted = st.form_submit_button("Test Patterns")
         
         if test_submitted and test_text:
             try:
@@ -330,11 +330,11 @@ def render(api_base_url: str):
                     result = response.json()
                     
                     if result['matches']:
-                        st.success(f"✅ Found {result['match_count']} match(es)!")
+                        st.success(f"Found {result['match_count']} match(es)!")
                         for match in result['matches']:
                             st.code(match)
                     else:
-                        st.info(f"ℹ️ No matches found using {result['patterns_used']} pattern(s)")
+                        st.info(f"No matches found using {result['patterns_used']} pattern(s)")
                 else:
                     st.error("Failed to test patterns")
             except Exception as e:

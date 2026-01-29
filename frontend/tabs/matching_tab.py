@@ -12,10 +12,10 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
         api_base_url: Base URL for API calls
         portal_type: Type of portal (hr_portal or candidate_portal)
     """
-    st.header("🎯 Job-Resume Matching & Ranking")
+    st.header("Job-Resume Matching & Ranking")
     
     # Job Selection Section
-    st.subheader("1️⃣ Select Job Description")
+    st.subheader("Select Job Description")
     
     col1, col2 = st.columns([3, 1])
     
@@ -31,11 +31,11 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
     
     if job_source == "Use Current Session Job":
         if not st.session_state.jd_data:
-            st.warning("⚠️ Please analyze a job description first (Tab 1)")
+            st.warning("Please analyze a job description first (Tab 1)")
             return
         else:
             selected_job = st.session_state.jd_data
-            st.info(f"📋 Using: **{selected_job.get('job_title', 'Current Job')}** (ID: `{selected_job['job_id'][:16]}...`)")
+            st.info(f"Using: **{selected_job.get('job_title', 'Current Job')}** (ID: `{selected_job['job_id'][:16]}...`)")
     
     else:  # Select from Database
         try:
@@ -47,7 +47,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                 jobs_list = jobs_data.get('jobs', [])
                 
                 if not jobs_list:
-                    st.warning("⚠️ No jobs found in database. Please add a job description first (Tab 1)")
+                    st.warning("No jobs found in database. Please add a job description first (Tab 1)")
                     return
                 
                 # Create job options for selectbox
@@ -65,7 +65,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                 selected_job = job_options[selected_job_key]
                 
                 # Show job details in expander
-                with st.expander("📄 View Job Requirements"):
+                with st.expander("View Job Requirements"):
                     st.write(f"**Job ID:** `{selected_job['job_id']}`")
                     st.write(f"**Title:** {selected_job.get('job_title', 'N/A')}")
                     st.write(f"**Experience Required:** {selected_job.get('required_experience', 0)} years")
@@ -87,7 +87,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
             return
     
     st.markdown("---")
-    st.subheader("2️⃣ Select Resumes and Match")
+    st.subheader("Select Resumes and Match")
     
     # Resume source selection
     resume_source = st.radio(
@@ -101,11 +101,11 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
     
     if resume_source == "Use Current Session Resumes":
         if not st.session_state.resumes_data:
-            st.warning("⚠️ Please upload and parse resumes first (Tab 2)")
+            st.warning("Please upload and parse resumes first (Tab 2)")
             return
         else:
             selected_resumes = st.session_state.resumes_data
-            st.info(f"📄 Using {len(selected_resumes)} resume(s) from current session")
+            st.info(f"Using {len(selected_resumes)} resume(s) from current session")
     
     else:  # Select from Database
         try:
@@ -117,10 +117,10 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                 db_resumes = resumes_data.get('resumes', [])
                 
                 if not db_resumes:
-                    st.warning("⚠️ No resumes found in database. Please upload resumes first (Tab 2)")
+                    st.warning("No resumes found in database. Please upload resumes first (Tab 2)")
                     return
                 
-                st.success(f"✅ Found {len(db_resumes)} resume(s) in database")
+                st.success(f"Found {len(db_resumes)} resume(s) in database")
                 
                 # Filter options
                 col1, col2, col3 = st.columns(3)
@@ -150,10 +150,10 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                     filtered_resumes = [r for r in filtered_resumes if r.get('file_type', '').upper() == file_type_filter]
                 
                 if not filtered_resumes:
-                    st.warning("⚠️ No resumes match the selected filters")
+                    st.warning("No resumes match the selected filters")
                     return
                 
-                st.info(f"📊 {len(filtered_resumes)} resume(s) after filtering")
+                st.info(f"{len(filtered_resumes)} resume(s) after filtering")
                 
                 # Multi-select for resumes
                 st.markdown("**Select Resumes to Match:**")
@@ -164,7 +164,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                     name = resume.get('candidate_name', 'Unknown')
                     email = resume.get('candidate_email', 'No email')
                     resume_id = resume.get('resume_id', 'unknown')[:12]
-                    source = "🏢 HR" if resume.get('upload_source') == 'hr_upload' else "👤 Self"
+                    source = "HR" if resume.get('upload_source') == 'hr_upload' else "Self"
                     
                     label = f"{name} ({email}) - {resume_id}... {source}"
                     resume_options[label] = resume
@@ -197,9 +197,9 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                     })
                 
                 if selected_resumes:
-                    st.success(f"✅ Selected {len(selected_resumes)} resume(s) for matching")
+                    st.success(f"Selected {len(selected_resumes)} resume(s) for matching")
                 else:
-                    st.info("👆 Please select at least one resume")
+                    st.info("Please select at least one resume")
                     return
                     
             else:
@@ -210,7 +210,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
             return
     
     if selected_resumes and selected_job:
-        st.success("✅ Ready to match and rank candidates!")
+        st.success("Ready to match and rank candidates!")
         
         use_fairness = st.checkbox("Use Fairness-Aware Ranking", value=False,
                                    help="Apply fairness constraints using Fairlearn")
@@ -219,11 +219,11 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
             fairness_method = st.selectbox("Fairness Method", ["expgrad", "reweighing", "threshold"], index=0)
 
         
-        if st.button("🚀 Match & Rank Candidates", type="primary"):
+        if st.button("Match & Rank Candidates", type="primary"):
             with st.spinner("Processing candidates..."):
                 try:
                     # First, check for existing matches to avoid duplicates
-                    st.info("🔍 Checking for existing matches...")
+                    st.info("Checking for existing matches...")
                     existing_matches_response = requests.get(
                         f"{api_base_url}/api/matches/job/{selected_job['job_id']}"
                     )
@@ -234,7 +234,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                         # Map resume_id -> match for quick lookup
                         for match in existing_matches:
                             existing_match_map[match['resume_id']] = match
-                        st.info(f"📊 Found {len(existing_match_map)} existing match(es) for this job")
+                        st.info(f"Found {len(existing_match_map)} existing match(es) for this job")
                     
                     # Prepare candidates data
                     candidates = []
@@ -298,7 +298,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                     
                     # Show matching summary
                     if newly_matched > 0 or reused_matches > 0:
-                        st.success(f"✅ Matching complete! {newly_matched} new match(es), {reused_matches} reused from database")
+                        st.success(f"Matching complete! {newly_matched} new match(es), {reused_matches} reused from database")
                     
                     # Rank candidates
                     rank_response = requests.post(
@@ -323,7 +323,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                         st.session_state.rank_job_id = ranked_results.get('job_id', selected_job['job_id'])
                         st.session_state.rank_fairness_enabled = ranked_results.get('fairness_enabled', use_fairness)
                         st.session_state.selected_job_for_ranking = selected_job  # Store for display
-                        st.success("✅ Candidates ranked successfully!")
+                        st.success("Candidates ranked successfully!")
                         st.rerun()
                     
                 except Exception as e:
@@ -332,7 +332,7 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
         # Display results
         if hasattr(st.session_state, 'ranked_candidates') and st.session_state.ranked_candidates:
             st.markdown("---")
-            st.subheader("📊 Ranking Results")
+            st.subheader("Ranking Results")
             
             # Create ranking table
             ranking_data = []
@@ -441,14 +441,14 @@ def render(api_base_url: str, portal_type: str = "hr_portal"):
                         st.markdown("**Skill Gaps:**")
                         if candidate['match_data']['skill_gaps']:
                             for gap in candidate['match_data']['skill_gaps']:
-                                st.write(f"❌ {gap}")
+                                st.write(f"{gap}")
                         else:
-                            st.write("✅ No skill gaps")
+                            st.write("No skill gaps")
                     
                     with col2:
                         st.markdown("**Matched Skills:**")
                         if candidate['match_data']['matched_skills']:
                             for skill in candidate['match_data']['matched_skills']:
-                                st.write(f"✅ {skill}")
+                                st.write(f"{skill}")
                         else:
                             st.write("No matched skills")

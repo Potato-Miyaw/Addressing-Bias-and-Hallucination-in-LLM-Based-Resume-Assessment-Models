@@ -11,10 +11,10 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
         api_base_url: Base URL for API calls
         portal_type: "hr_upload" for HR Portal or "candidate_self" for Candidate Portal
     """
-    st.header("📋 Resume Management")
+    st.header("Resume Management")
     
     # Tabs for Upload vs View
-    upload_tab, view_tab = st.tabs(["📤 Upload New Resumes", "📊 View Database Resumes"])
+    upload_tab, view_tab = st.tabs(["Upload New Resumes", "View Database Resumes"])
     
     with upload_tab:
         st.markdown("Upload resumes (PDF, DOCX, DOC, TXT) to extract structured information and save to database")
@@ -34,7 +34,7 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
         )
     
     if uploaded_files:
-        if st.button("📤 Upload Resumes", type="primary"):
+        if st.button("Upload Resumes", type="primary"):
             st.session_state.resumes_data = []
             
             # Map NER model selection to endpoint
@@ -48,7 +48,7 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                 endpoint = "/api/resume/parse-v2-file"
                 model_name = "Resume-Specific NER"
             
-            st.info(f"📦 Uploading {len(uploaded_files)} file(s) using {model_name}...")
+            st.info(f"Uploading {len(uploaded_files)} file(s) using {model_name}...")
             
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -85,19 +85,19 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                 
                 progress_bar.progress((idx + 1) / len(uploaded_files))
             
-            status_text.text("✅ All files processed!")
+            status_text.text("All files processed!")
             progress_bar.empty()
-            st.success(f"✅ Successfully processed {len(st.session_state.resumes_data)} resumes")
+            st.success(f"Successfully processed {len(st.session_state.resumes_data)} resumes")
             st.rerun()
     
     # Display parsed resumes
     if st.session_state.resumes_data:
         st.markdown("---")
-        st.subheader("📊 Recently Uploaded Resumes")
-        st.info("ℹ️ These resumes have been saved to the database")
+        st.subheader("Recently Uploaded Resumes")
+        st.info("These resumes have been saved to the database")
         
         for idx, resume in enumerate(st.session_state.resumes_data):
-            with st.expander(f"📄 {resume['filename']}", expanded=(idx == 0)):
+            with st.expander(f"{resume['filename']}", expanded=(idx == 0)):
                 data = resume['data']
                 
                 col1, col2, col3 = st.columns(3)
@@ -115,18 +115,18 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                 with col3:
                     st.metric("Status", data.get('status', 'UNKNOWN'))
                     saved = data.get('saved_to_db', False)
-                    st.metric("Saved to DB", "✅ Yes" if saved else "❌ No")
+                    st.metric("Saved to DB", "Yes" if saved else "No")
                 
                 # Show skills if available
                 skills = data.get('skills', [])
                 if skills:
-                    st.markdown("**🛠️ Extracted Skills:**")
+                    st.markdown("**Extracted Skills:**")
                     st.write(", ".join(skills[:10]))
                     if len(skills) > 10:
                         st.caption(f"... and {len(skills)-10} more")
     
     with view_tab:
-        st.markdown("### 📂 Resumes in Database")
+        st.markdown("### Resumes in Database")
         st.markdown("View all resumes that have been uploaded by candidates and HR")
         
         # Fetch resumes from database
@@ -139,9 +139,9 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                 total = resumes_data.get('total', 0)
                 
                 if not resumes:
-                    st.info("📭 No resumes in database yet. Upload some resumes to get started!")
+                    st.info("No resumes in database yet. Upload some resumes to get started!")
                 else:
-                    st.success(f"✅ Found {total} resume(s) in database")
+                    st.success(f"Found {total} resume(s) in database")
                     
                     # Filters
                     col_filter1, col_filter2 = st.columns(2)
@@ -174,7 +174,7 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                     # Display resumes
                     for idx, resume in enumerate(filtered_resumes):
                         with st.expander(
-                            f"📄 {resume.get('filename', 'Unknown')} - {resume.get('candidate_name', 'No name')}", 
+                            f"{resume.get('filename', 'Unknown')} - {resume.get('candidate_name', 'No name')}", 
                             expanded=(idx == 0)
                         ):
                             col1, col2, col3, col4 = st.columns(4)
@@ -187,7 +187,7 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                                 st.metric("Email", resume.get('candidate_email', 'Not extracted'))
                             with col4:
                                 source = resume.get('upload_source', 'unknown')
-                                source_display = "👤 Candidate" if source == "candidate_self" else "👨‍💼 HR"
+                                source_display = "Candidate" if source == "candidate_self" else "HR"
                                 st.metric("Uploaded by", source_display)
                             
                             st.markdown("**File Info:**")
@@ -202,7 +202,7 @@ def render(api_base_url: str, portal_type: str = "hr_upload"):
                                 if len(raw_text) > 2000:
                                     st.caption(f"Showing first 2000 of {len(raw_text)} characters")
             else:
-                st.error("❌ Could not fetch resumes from database")
+                st.error("Could not fetch resumes from database")
         
         except Exception as e:
-            st.error(f"❌ Error loading resumes: {str(e)}")
+            st.error(f"Error loading resumes: {str(e)}")

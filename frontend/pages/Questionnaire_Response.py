@@ -13,7 +13,6 @@ API_BASE_URL = "http://localhost:8000"
 # Page config
 st.set_page_config(
     page_title="Questionnaire - Candidate Response",
-    page_icon="📋",
     layout="wide"
 )
 
@@ -22,12 +21,12 @@ query_params = st.query_params
 token = query_params.get("token", None)
 
 # Header
-st.title("📋 Pre-Interview Questionnaire")
+st.title("Pre-Interview Questionnaire")
 st.markdown("Please answer the following questions to help us better understand your qualifications")
 
 if not token:
-    st.error("❌ Invalid or missing invitation link")
-    st.info("💡 Please use the invitation link sent to your email")
+    st.error("Invalid or missing invitation link")
+    st.info("Please use the invitation link sent to your email")
     st.stop()
 
 # Validate token and get questionnaire
@@ -43,16 +42,16 @@ try:
             error_type = data.get('error')
             
             if error_type == 'already_submitted':
-                st.success("✅ You have already submitted this questionnaire")
+                st.success("You have already submitted this questionnaire")
                 st.info(f"Submitted on: {data['submitted_at']}")
                 st.markdown("---")
                 st.markdown("Thank you for your response! The HR team will review your answers and contact you soon.")
             elif error_type == 'expired':
-                st.error("⏰ This invitation link has expired")
+                st.error("This invitation link has expired")
                 st.info(f"Expired on: {data['expired_at']}")
                 st.markdown("Please contact HR for a new invitation link.")
             else:
-                st.error(f"❌ {data.get('message', 'Invalid invitation')}")
+                st.error(f"{data.get('message', 'Invalid invitation')}")
             
             st.stop()
         
@@ -62,7 +61,7 @@ try:
         
         # Welcome message
         st.success(f"Welcome, **{invitation['candidate_name']}**!")
-        st.info(f"📧 {invitation['candidate_email']} | ⏰ Expires: {invitation['expires_at'][:10]}")
+        st.info(f"{invitation['candidate_email']} | Expires: {invitation['expires_at'][:10]}")
         
         st.markdown("---")
         
@@ -130,7 +129,7 @@ try:
                 st.markdown("---")
             
             # Submit button
-            submitted = st.form_submit_button("📤 Submit Questionnaire", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Submit Questionnaire", type="primary", use_container_width=True)
             
             if submitted:
                 # Validate required questions
@@ -140,7 +139,7 @@ try:
                         missing_required.append(ans['question_id'])
                 
                 if missing_required:
-                    st.error(f"❌ Please answer all required questions ({len(missing_required)} missing)")
+                    st.error(f"Please answer all required questions ({len(missing_required)} missing)")
                 else:
                     # Submit responses
                     with st.spinner("Submitting your answers..."):
@@ -154,23 +153,23 @@ try:
                     
                     if submit_response.status_code == 200:
                         result = submit_response.json()
-                        st.success("✅ " + result['message'])
+                        st.success(result['message'])
                         st.balloons()
                         
                         st.markdown("---")
-                        st.markdown("### 🎉 Thank you for completing the questionnaire!")
+                        st.markdown("### Thank you for completing the questionnaire!")
                         st.info("The HR team will review your responses and contact you regarding the next steps in the hiring process.")
                         
                         # Disable further submissions
                         st.stop()
                     else:
                         error_msg = submit_response.json().get('detail', 'Submission failed')
-                        st.error(f"❌ {error_msg}")
+                        st.error(f"{error_msg}")
     
     else:
-        st.error("❌ Failed to validate invitation link")
+        st.error("Failed to validate invitation link")
         st.info("Please contact HR if you continue to experience issues")
 
 except Exception as e:
-    st.error(f"❌ Error: {str(e)}")
+    st.error(f"Error: {str(e)}")
     st.info("Please contact HR for assistance")
