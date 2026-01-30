@@ -298,25 +298,42 @@ async def _run_experiment_task(config: ExperimentConfig):
     global experiment_state
     
     try:
+        import traceback
+        
+        print(f"\n{'='*70}")
+        print(f"🔬 Starting bias detection experiment")
+        print(f"   Models: {config.models}")
+        print(f"   Job Roles: {config.job_roles}")
+        print(f"   Quality Levels: {config.quality_levels}")
+        print(f"   Names per demographic: {config.names_per_demographic}")
+        print(f"{'='*70}\n")
+        
         def progress_callback(message: str, progress: float):
             experiment_state["message"] = message
             experiment_state["progress"] = progress
+            print(f"  📊 Progress: {progress*100:.1f}% - {message}")
         
         engine = BiasDetectionEngine(
             models=config.models,
             job_roles=config.job_roles,
             quality_levels=config.quality_levels,
-            names_per_demographic=config.names_per_demographic
-        )
-        
-        engine.generate_test_cases()
-        engine.run_experiment(
-            progress_callback=progress_callback,
+            names_per_demographic=config.names_per_demographic,
             hf_token=config.hf_token
         )
         
+        print("✅ BiasDetectionEngine initialized")
+        
+        engine.generate_test_cases()
+        print(f"✅ Generated {len(engine.test_cases)} test cases")
+        
+        engine.run_experiment(
+            progress_callback=progress_callback
+        )
+        print("✅ Experiment evaluation completed")
+        
         # Generate report
         results = engine.to_dict()
+        print("✅ Report generated and converted to dict")
         
         experiment_state["status"] = "completed"
         experiment_state["progress"] = 1.0
@@ -324,7 +341,15 @@ async def _run_experiment_task(config: ExperimentConfig):
         experiment_state["completed_at"] = datetime.now().isoformat()
         experiment_state["results"] = results
         
+        print(f"\n✅ Experiment completed successfully!")
+        print(f"{'='*70}\n")
+        
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"\n❌ Error in experiment task:")
+        print(error_trace)
+        
         experiment_state["status"] = "failed"
         experiment_state["message"] = f"Experiment failed: {str(e)}"
         experiment_state["completed_at"] = datetime.now().isoformat()
