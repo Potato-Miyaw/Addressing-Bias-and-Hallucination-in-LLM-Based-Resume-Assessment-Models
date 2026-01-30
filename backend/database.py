@@ -12,8 +12,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # MongoDB connection settings
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017/")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "resume_screening_db")
+MONGODB_URL = os.getenv("MONGODB_URL")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
 
 class Database:
     """MongoDB database singleton"""

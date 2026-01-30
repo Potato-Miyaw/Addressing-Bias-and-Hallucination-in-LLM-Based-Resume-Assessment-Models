@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import hashlib
 import secrets
 import logging
+import os
 
 from backend.database import (
     save_questionnaire,
@@ -36,6 +37,11 @@ from backend.services.hiring_predictor import get_hiring_predictor
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/questionnaire", tags=["Questionnaire"])
 
+from dotenv import load_dotenv as load
+load()
+
+# API Configuration
+STREAMLIT_URL = os.getenv("STREAMLIT_URL")
 
 # ==================== Pydantic Models ====================
 
@@ -279,7 +285,7 @@ async def send_invitation(request: InvitationCreate):
         
         # Generate invitation link
         # TODO: In production, use actual domain
-        invitation_link = f"http://localhost:8501/Questionnaire_Response?token={token}"
+        invitation_link = f"{STREAMLIT_URL}/Questionnaire_Response?token={token}"
         
         # Send via selected method(s)
         email_sent = False

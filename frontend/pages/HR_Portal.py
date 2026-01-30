@@ -14,10 +14,11 @@ sys.path.insert(0, project_root)
 # Import tab modules
 from tabs import job_description_tab, resumes_tab, matching_tab, verification_tab, pipeline_tab, feedback_tab, bias_tab, multilang_tab, questionnaire_tab
 
-
+from dotenv import load_dotenv as load
+load()
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_BASE_URL")
 
 # Page config
 st.set_page_config(

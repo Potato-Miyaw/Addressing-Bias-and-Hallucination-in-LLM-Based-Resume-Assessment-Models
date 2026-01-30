@@ -11,8 +11,11 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
+from dotenv import load_dotenv as load
+load()
+
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_BASE_URL")
 
 # Page config
 st.set_page_config(

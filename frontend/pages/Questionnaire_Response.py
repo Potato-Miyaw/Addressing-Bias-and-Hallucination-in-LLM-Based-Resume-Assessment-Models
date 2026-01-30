@@ -4,11 +4,14 @@ Candidates access this via token link sent by HR
 """
 
 import streamlit as st
-import requests
+import requests, os
 from datetime import datetime
 
+from dotenv import load_dotenv as load
+load()
+
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = os.getenv("API_BASE_URL")
 
 # Page config
 st.set_page_config(
