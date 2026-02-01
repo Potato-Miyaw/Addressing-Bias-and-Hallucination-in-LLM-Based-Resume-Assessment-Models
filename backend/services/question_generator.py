@@ -35,10 +35,10 @@ def _load_model():
         _tokenizer = AutoTokenizer.from_pretrained(checkpoint)
         _model = AutoModelForCausalLM.from_pretrained(checkpoint).to(device)
         _model_loaded = True
-        logger.info("✅ SmolLM2 model loaded successfully")
+        logger.info("SmolLM2 model loaded successfully")
         
     except Exception as e:
-        logger.warning(f"⚠️ Failed to load SmolLM2 model: {e}. Will use templates only.")
+        logger.warning(f"Failed to load SmolLM2 model: {e}. Will use templates only.")
         _model_loaded = False
 
 
@@ -265,7 +265,7 @@ Generate {num_questions} questions now, numbered 1-{num_questions}:"""
         return questions
         
     except Exception as e:
-        logger.error(f"❌ AI question generation failed: {e}")
+        logger.error(f"AI question generation failed: {e}")
         return _generate_fallback_behavioral_questions(job_title, num_questions)
 
 
