@@ -95,7 +95,7 @@ class QuickFeedbackImprover:
             if learned_pattern not in self.learned_patterns[field]:
                 self.learned_patterns[field].append(learned_pattern)
                 feedback_entry['learned_pattern'] = learned_pattern
-                logger.info(f"✅ Learned new {field} pattern: {learned_pattern}")
+                logger.info(f"Learned new {field} pattern: {learned_pattern}")
         
         # Add to history
         self.feedback_history.append(feedback_entry)

@@ -21,7 +21,7 @@ class HybridResumeNERExtractor:
         self.generic_ner = ResumeNERExtractor()
         self.resume_ner = ResumeNERExtractorV2()
         
-        logger.info("✅ Hybrid NER ready")
+        logger.info("Hybrid NER ready")
     
     def parse_resume(self, resume_text: str) -> Dict[str, Any]:
         """
@@ -128,7 +128,7 @@ class HybridResumeNERExtractor:
             combined['extraction_status'] = "SUCCESS"
             combined['model_type'] = "HYBRID (Generic + Resume-Specific)"
             
-            logger.info(f"✅ Hybrid extraction complete")
+            logger.info(f"Hybrid extraction complete")
             
             return combined
         

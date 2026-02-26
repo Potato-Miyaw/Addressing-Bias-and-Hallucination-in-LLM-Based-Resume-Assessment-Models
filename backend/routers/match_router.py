@@ -172,7 +172,7 @@ async def create_match(match_data: MatchCreate):
         if not result:
             raise HTTPException(status_code=500, detail="Failed to create match")
         
-        logger.info(f"✅ Match created: {result['match_id']}")
+        logger.info(f"Match created: {result['match_id']}")
         return MatchResponse(**result)
     
     except Exception as e:
@@ -321,7 +321,7 @@ async def delete_match_by_id(match_id: str):
         if not success:
             raise HTTPException(status_code=404, detail=f"Match {match_id} not found")
         
-        logger.info(f"✅ Match deleted: {match_id}")
+        logger.info(f"Match deleted: {match_id}")
         return None
     
     except HTTPException:

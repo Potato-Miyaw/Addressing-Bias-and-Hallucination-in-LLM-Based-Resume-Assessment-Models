@@ -401,8 +401,8 @@ async def parse_resume_generic_file(
     """
     try:
         # Debug logging
-        print(f"🔍 DEBUG - upload_source received: {upload_source}")
-        print(f"🔍 DEBUG - uploaded_by received: {uploaded_by}")
+        print(f"DEBUG - upload_source received: {upload_source}")
+        print(f"DEBUG - uploaded_by received: {uploaded_by}")
         
         # Read file content
         content = await file.read()
@@ -539,7 +539,7 @@ async def parse_resume_v2_file(
     """
     try:
         # Debug logging
-        print(f"🔍 DEBUG parse-v2-file - upload_source: {upload_source}, uploaded_by: {uploaded_by}")
+        print(f"DEBUG parse-v2-file - upload_source: {upload_source}, uploaded_by: {uploaded_by}")
         
         # Read file content
         content = await file.read()

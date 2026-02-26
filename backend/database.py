@@ -30,13 +30,13 @@ async def connect_to_mongo():
         
         # Test connection
         await db_instance.client.admin.command('ping')
-        logger.info(f"✅ Connected to MongoDB: {DATABASE_NAME}")
+        logger.info(f"Connected to MongoDB: {DATABASE_NAME}")
         
         # Create indexes
         await create_indexes()
         
     except Exception as e:
-        logger.error(f"❌ Failed to connect to MongoDB: {e}")
+        logger.error(f"Failed to connect to MongoDB: {e}")
         raise
 
 async def close_mongo_connection():
@@ -92,7 +92,7 @@ async def create_indexes():
         await db_instance.db.questionnaire_responses.create_index([("questionnaire_id", ASCENDING)])
         await db_instance.db.questionnaire_responses.create_index([("submitted_at", DESCENDING)])
         
-        logger.info("✅ Database indexes created for all collections")
+        logger.info("Database indexes created for all collections")
     except Exception as e:
         logger.warning(f"Index creation warning: {e}")
 
@@ -124,10 +124,10 @@ async def save_job_description(job_data: Dict[str, Any]) -> bool:
             {"$set": job_data},
             upsert=True
         )
-        logger.info(f"✅ Saved job description: {job_data['job_id']}")
+        logger.info(f"Saved job description: {job_data['job_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save job description: {e}")
+        logger.error(f"Failed to save job description: {e}")
         return False
 
 async def get_job_description(job_id: str) -> Optional[Dict[str, Any]]:
@@ -146,7 +146,7 @@ async def get_job_description(job_id: str) -> Optional[Dict[str, Any]]:
             job.pop("_id", None)  # Remove MongoDB internal ID
         return job
     except Exception as e:
-        logger.error(f"❌ Failed to get job description: {e}")
+        logger.error(f"Failed to get job description: {e}")
         return None
 
 async def get_job_by_content_hash(content_hash: str) -> Optional[Dict[str, Any]]:
@@ -165,7 +165,7 @@ async def get_job_by_content_hash(content_hash: str) -> Optional[Dict[str, Any]]
             job.pop("_id", None)
         return job
     except Exception as e:
-        logger.error(f"❌ Failed to check duplicate job: {e}")
+        logger.error(f"Failed to check duplicate job: {e}")
         return None
 
 async def list_job_descriptions(limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
@@ -187,7 +187,7 @@ async def list_job_descriptions(limit: int = 50, skip: int = 0) -> List[Dict[str
             jobs.append(job)
         return jobs
     except Exception as e:
-        logger.error(f"❌ Failed to list job descriptions: {e}")
+        logger.error(f"Failed to list job descriptions: {e}")
         return []
 
 async def search_jobs_by_title(title: str) -> List[Dict[str, Any]]:
@@ -211,7 +211,7 @@ async def search_jobs_by_title(title: str) -> List[Dict[str, Any]]:
             jobs.append(job)
         return jobs
     except Exception as e:
-        logger.error(f"❌ Failed to search jobs: {e}")
+        logger.error(f"Failed to search jobs: {e}")
         return []
 
 async def delete_job_description(job_id: str) -> bool:
@@ -227,13 +227,13 @@ async def delete_job_description(job_id: str) -> bool:
     try:
         result = await db_instance.db.job_descriptions.delete_one({"job_id": job_id})
         if result.deleted_count > 0:
-            logger.info(f"✅ Deleted job description: {job_id}")
+            logger.info(f"Deleted job description: {job_id}")
             return True
         else:
-            logger.warning(f"⚠️ Job not found: {job_id}")
+            logger.warning(f"Job not found: {job_id}")
             return False
     except Exception as e:
-        logger.error(f"❌ Failed to delete job description: {e}")
+        logger.error(f"Failed to delete job description: {e}")
         return False
 
 async def get_job_count() -> int:
@@ -247,7 +247,7 @@ async def get_job_count() -> int:
         count = await db_instance.db.job_descriptions.count_documents({})
         return count
     except Exception as e:
-        logger.error(f"❌ Failed to count jobs: {e}")
+        logger.error(f"Failed to count jobs: {e}")
         return 0
 
 
@@ -275,10 +275,10 @@ async def save_ground_truth(ground_truth_data: Dict[str, Any]) -> bool:
             {"$set": ground_truth_data},
             upsert=True
         )
-        logger.info(f"✅ Saved ground truth: {ground_truth_data['resume_id']}")
+        logger.info(f"Saved ground truth: {ground_truth_data['resume_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save ground truth: {e}")
+        logger.error(f"Failed to save ground truth: {e}")
         return False
 
 async def get_ground_truth(resume_id: str) -> Optional[Dict[str, Any]]:
@@ -297,7 +297,7 @@ async def get_ground_truth(resume_id: str) -> Optional[Dict[str, Any]]:
             ground_truth.pop("_id", None)
         return ground_truth
     except Exception as e:
-        logger.error(f"❌ Failed to get ground truth: {e}")
+        logger.error(f"Failed to get ground truth: {e}")
         return None
 
 async def get_ground_truth_by_content_hash(content_hash: str) -> Optional[Dict[str, Any]]:
@@ -316,7 +316,7 @@ async def get_ground_truth_by_content_hash(content_hash: str) -> Optional[Dict[s
             ground_truth.pop("_id", None)
         return ground_truth
     except Exception as e:
-        logger.error(f"❌ Failed to check duplicate resume: {e}")
+        logger.error(f"Failed to check duplicate resume: {e}")
         return None
 
 async def list_ground_truths(limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
@@ -338,7 +338,7 @@ async def list_ground_truths(limit: int = 50, skip: int = 0) -> List[Dict[str, A
             ground_truths.append(gt)
         return ground_truths
     except Exception as e:
-        logger.error(f"❌ Failed to list ground truths: {e}")
+        logger.error(f"Failed to list ground truths: {e}")
         return []
 
 async def delete_ground_truth(resume_id: str) -> bool:
@@ -354,13 +354,13 @@ async def delete_ground_truth(resume_id: str) -> bool:
     try:
         result = await db_instance.db.ground_truth.delete_one({"resume_id": resume_id})
         if result.deleted_count > 0:
-            logger.info(f"✅ Deleted ground truth: {resume_id}")
+            logger.info(f"Deleted ground truth: {resume_id}")
             return True
         else:
-            logger.warning(f"⚠️ Ground truth not found: {resume_id}")
+            logger.warning(f"Ground truth not found: {resume_id}")
             return False
     except Exception as e:
-        logger.error(f"❌ Failed to delete ground truth: {e}")
+        logger.error(f"Failed to delete ground truth: {e}")
         return False
 
 async def get_ground_truth_count() -> int:
@@ -374,7 +374,7 @@ async def get_ground_truth_count() -> int:
         count = await db_instance.db.ground_truth.count_documents({})
         return count
     except Exception as e:
-        logger.error(f"❌ Failed to count ground truths: {e}")
+        logger.error(f"Failed to count ground truths: {e}")
         return 0
 
 # ============================================================================
@@ -399,10 +399,10 @@ async def save_match(match_data: Dict[str, Any]) -> bool:
             {"$set": match_data},
             upsert=True
         )
-        logger.info(f"✅ Saved match: {match_data['match_id']}")
+        logger.info(f"Saved match: {match_data['match_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save match: {e}")
+        logger.error(f"Failed to save match: {e}")
         return False
 
 async def get_match(match_id: str) -> Optional[Dict[str, Any]]:
@@ -422,7 +422,7 @@ async def get_match(match_id: str) -> Optional[Dict[str, Any]]:
             return match
         return None
     except Exception as e:
-        logger.error(f"❌ Failed to get match: {e}")
+        logger.error(f"Failed to get match: {e}")
         return None
 
 async def get_matches_by_job(job_id: str, limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
@@ -449,7 +449,7 @@ async def get_matches_by_job(job_id: str, limit: int = 50, skip: int = 0) -> Lis
             matches.append(match)
         return matches
     except Exception as e:
-        logger.error(f"❌ Failed to get matches by job: {e}")
+        logger.error(f"Failed to get matches by job: {e}")
         return []
 
 async def get_matches_by_resume(resume_id: str, limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
@@ -476,7 +476,7 @@ async def get_matches_by_resume(resume_id: str, limit: int = 50, skip: int = 0) 
             matches.append(match)
         return matches
     except Exception as e:
-        logger.error(f"❌ Failed to get matches by resume: {e}")
+        logger.error(f"Failed to get matches by resume: {e}")
         return []
 
 async def get_matches_by_tier(job_id: str, tier: str) -> List[Dict[str, Any]]:
@@ -502,7 +502,7 @@ async def get_matches_by_tier(job_id: str, tier: str) -> List[Dict[str, Any]]:
             matches.append(match)
         return matches
     except Exception as e:
-        logger.error(f"❌ Failed to get matches by tier: {e}")
+        logger.error(f"Failed to get matches by tier: {e}")
         return []
 
 async def list_matches(limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
@@ -528,7 +528,7 @@ async def list_matches(limit: int = 50, skip: int = 0) -> List[Dict[str, Any]]:
             matches.append(match)
         return matches
     except Exception as e:
-        logger.error(f"❌ Failed to list matches: {e}")
+        logger.error(f"Failed to list matches: {e}")
         return []
 
 async def delete_match(match_id: str) -> bool:
@@ -544,13 +544,13 @@ async def delete_match(match_id: str) -> bool:
     try:
         result = await db_instance.db.matches.delete_one({"match_id": match_id})
         if result.deleted_count > 0:
-            logger.info(f"✅ Deleted match: {match_id}")
+            logger.info(f"Deleted match: {match_id}")
             return True
         else:
-            logger.warning(f"⚠️ Match not found: {match_id}")
+            logger.warning(f"Match not found: {match_id}")
             return False
     except Exception as e:
-        logger.error(f"❌ Failed to delete match: {e}")
+        logger.error(f"Failed to delete match: {e}")
         return False
 
 async def get_match_count() -> int:
@@ -564,7 +564,7 @@ async def get_match_count() -> int:
         count = await db_instance.db.matches.count_documents({})
         return count
     except Exception as e:
-        logger.error(f"❌ Failed to count matches: {e}")
+        logger.error(f"Failed to count matches: {e}")
         return 0
 
 
@@ -592,10 +592,10 @@ async def save_questionnaire(questionnaire_data: Dict[str, Any]) -> bool:
             {"$set": questionnaire_data},
             upsert=True
         )
-        logger.info(f"✅ Saved questionnaire: {questionnaire_data['questionnaire_id']}")
+        logger.info(f"Saved questionnaire: {questionnaire_data['questionnaire_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save questionnaire: {e}")
+        logger.error(f"Failed to save questionnaire: {e}")
         return False
 
 
@@ -615,7 +615,7 @@ async def get_questionnaire(questionnaire_id: str) -> Optional[Dict[str, Any]]:
             questionnaire.pop("_id", None)
         return questionnaire
     except Exception as e:
-        logger.error(f"❌ Failed to get questionnaire: {e}")
+        logger.error(f"Failed to get questionnaire: {e}")
         return None
 
 
@@ -641,7 +641,7 @@ async def list_questionnaires(limit: int = 50, skip: int = 0, status: Optional[s
             questionnaires.append(q)
         return questionnaires
     except Exception as e:
-        logger.error(f"❌ Failed to list questionnaires: {e}")
+        logger.error(f"Failed to list questionnaires: {e}")
         return []
 
 
@@ -658,11 +658,11 @@ async def delete_questionnaire(questionnaire_id: str) -> bool:
     try:
         result = await db_instance.db.questionnaires.delete_one({"questionnaire_id": questionnaire_id})
         if result.deleted_count > 0:
-            logger.info(f"✅ Deleted questionnaire: {questionnaire_id}")
+            logger.info(f"Deleted questionnaire: {questionnaire_id}")
             return True
         return False
     except Exception as e:
-        logger.error(f"❌ Failed to delete questionnaire: {e}")
+        logger.error(f"Failed to delete questionnaire: {e}")
         return False
 
 
@@ -688,10 +688,10 @@ async def save_invitation(invitation_data: Dict[str, Any]) -> bool:
             {"$set": invitation_data},
             upsert=True
         )
-        logger.info(f"✅ Saved invitation: {invitation_data['invitation_id']}")
+        logger.info(f"Saved invitation: {invitation_data['invitation_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save invitation: {e}")
+        logger.error(f"Failed to save invitation: {e}")
         return False
 
 
@@ -711,7 +711,7 @@ async def get_invitation_by_token(token: str) -> Optional[Dict[str, Any]]:
             invitation.pop("_id", None)
         return invitation
     except Exception as e:
-        logger.error(f"❌ Failed to get invitation by token: {e}")
+        logger.error(f"Failed to get invitation by token: {e}")
         return None
 
 
@@ -732,7 +732,7 @@ async def mark_invitation_used(token: str) -> bool:
         )
         return result.modified_count > 0
     except Exception as e:
-        logger.error(f"❌ Failed to mark invitation used: {e}")
+        logger.error(f"Failed to mark invitation used: {e}")
         return False
 
 
@@ -757,7 +757,7 @@ async def get_invitations_by_questionnaire(questionnaire_id: str) -> List[Dict[s
             invitations.append(inv)
         return invitations
     except Exception as e:
-        logger.error(f"❌ Failed to get invitations: {e}")
+        logger.error(f"Failed to get invitations: {e}")
         return []
 
 
@@ -783,10 +783,10 @@ async def save_response(response_data: Dict[str, Any]) -> bool:
             {"$set": response_data},
             upsert=True
         )
-        logger.info(f"✅ Saved response: {response_data['response_id']}")
+        logger.info(f"Saved response: {response_data['response_id']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Failed to save response: {e}")
+        logger.error(f"Failed to save response: {e}")
         return False
 
 
@@ -806,7 +806,7 @@ async def get_response_by_token(token: str) -> Optional[Dict[str, Any]]:
             response.pop("_id", None)
         return response
     except Exception as e:
-        logger.error(f"❌ Failed to get response: {e}")
+        logger.error(f"Failed to get response: {e}")
         return None
 
 
@@ -831,5 +831,5 @@ async def get_responses_by_questionnaire(questionnaire_id: str) -> List[Dict[str
             responses.append(resp)
         return responses
     except Exception as e:
-        logger.error(f"❌ Failed to get responses: {e}")
+        logger.error(f"Failed to get responses: {e}")
         return []

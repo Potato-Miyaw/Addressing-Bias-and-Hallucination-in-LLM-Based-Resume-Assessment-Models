@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 import hashlib
 import secrets
 import logging
-import os
 
 from backend.database import (
     save_questionnaire,
@@ -37,11 +36,6 @@ from backend.services.hiring_predictor import get_hiring_predictor
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/questionnaire", tags=["Questionnaire"])
 
-from dotenv import load_dotenv as load
-load()
-
-# API Configuration
-STREAMLIT_URL = os.getenv("STREAMLIT_URL")
 
 # ==================== Pydantic Models ====================
 
@@ -135,7 +129,7 @@ async def generate_questionnaire_from_match(request: QuestionnaireGenerate):
         if not success:
             raise HTTPException(500, "Failed to save questionnaire")
         
-        logger.info(f"✅ Generated questionnaire: {questionnaire_data['questionnaire_id']}")
+        logger.info(f"Generated questionnaire: {questionnaire_data['questionnaire_id']}")
         
         return {
             "success": True,
@@ -285,7 +279,7 @@ async def send_invitation(request: InvitationCreate):
         
         # Generate invitation link
         # TODO: In production, use actual domain
-        invitation_link = f"{STREAMLIT_URL}/Questionnaire_Response?token={token}"
+        invitation_link = f"http://localhost:8501/Questionnaire_Response?token={token}"
         
         # Send via selected method(s)
         email_sent = False
@@ -307,18 +301,18 @@ async def send_invitation(request: InvitationCreate):
                     )
                     
                     if email_sent:
-                        logger.info(f"✅ Email sent to {request.candidate_email}")
+                        logger.info(f"Email sent to {request.candidate_email}")
                     else:
-                        logger.warning(f"⚠️ Failed to send email to {request.candidate_email}")
+                        logger.warning(f"Failed to send email to {request.candidate_email}")
                 except Exception as e:
-                    logger.error(f"❌ Email sending error: {e}")
+                    logger.error(f"Email sending error: {e}")
             else:
-                logger.warning("⚠️ Email not configured")
+                logger.warning("Email not configured")
         
         # Send WhatsApp
         if delivery_method in ["whatsapp", "both"]:
             if not request.candidate_phone:
-                logger.warning("⚠️ WhatsApp requested but no phone number provided")
+                logger.warning("WhatsApp requested but no phone number provided")
             else:
                 whatsapp_service = get_whatsapp_service()
                 if whatsapp_service.is_configured:
@@ -333,15 +327,15 @@ async def send_invitation(request: InvitationCreate):
                         )
                         
                         if whatsapp_sent:
-                            logger.info(f"✅ WhatsApp sent to {request.candidate_phone}")
+                            logger.info(f"WhatsApp sent to {request.candidate_phone}")
                         else:
-                            logger.warning(f"⚠️ Failed to send WhatsApp to {request.candidate_phone}")
+                            logger.warning(f"Failed to send WhatsApp to {request.candidate_phone}")
                     except Exception as e:
-                        logger.error(f"❌ WhatsApp sending error: {e}")
+                        logger.error(f"WhatsApp sending error: {e}")
                 else:
-                    logger.warning("⚠️ WhatsApp not configured")
+                    logger.warning("WhatsApp not configured")
         
-        logger.info(f"✅ Created invitation for {request.candidate_email}")
+        logger.info(f"Created invitation for {request.candidate_email}")
         
         return {
             "success": True,
@@ -465,9 +459,9 @@ async def submit_response(request: ResponseSubmit):
             analyzer = get_answer_analyzer()
             ml_features = analyzer.analyze_response(request.answers)
             response_data['ml_features'] = ml_features
-            logger.info(f"✅ ML features extracted: quality_score={ml_features['overall_quality_score']:.1f}")
+            logger.info(f"ML features extracted: quality_score={ml_features['overall_quality_score']:.1f}")
         except Exception as e:
-            logger.warning(f"⚠️ Failed to extract ML features: {e}")
+            logger.warning(f"Failed to extract ML features: {e}")
             # Continue without ML features
         
         # Save response
@@ -478,7 +472,7 @@ async def submit_response(request: ResponseSubmit):
         # Mark invitation as used
         await mark_invitation_used(request.token)
         
-        logger.info(f"✅ Response submitted by {invitation['candidate_email']}")
+        logger.info(f"Response submitted by {invitation['candidate_email']}")
         
         return {
             "success": True,
@@ -593,13 +587,13 @@ async def resend_email(request: ResendEmailRequest):
         )
         
         if success:
-            logger.info(f"✅ Resent email to {request.candidate_email}")
+            logger.info(f"Resent email to {request.candidate_email}")
             return {
                 "success": True,
                 "message": f"Email resent successfully to {request.candidate_email}"
             }
         else:
-            logger.error(f"❌ Failed to resend email to {request.candidate_email}")
+            logger.error(f"Failed to resend email to {request.candidate_email}")
             raise HTTPException(500, "Failed to send email. Check SMTP configuration and backend logs.")
     
     except HTTPException:

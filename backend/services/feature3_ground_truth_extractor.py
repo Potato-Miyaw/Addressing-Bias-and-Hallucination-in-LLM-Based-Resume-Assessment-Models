@@ -125,9 +125,9 @@ class GroundTruthExtractor:
             ground_truth['email'] = email_value  # Fallback field name for compatibility
             evidence_snippets['email'] = self.extract_context_snippet(resume_text, email_value, 60)
             evidence_snippets['email_address'] = evidence_snippets['email']
-            logger.info(f"✅ Extracted EMAIL: {email_value}")
+            logger.info(f"Extracted EMAIL: {email_value}")
         else:
-            logger.warning(f"⚠️ No email found in resume text")
+            logger.warning(f"No email found in resume text")
         
         # 3. PHONE - Extract from text
         phone_patterns = [
@@ -146,10 +146,10 @@ class GroundTruthExtractor:
                 ground_truth['phone'] = phone_value  # Fallback field name for compatibility
                 evidence_snippets['phone'] = self.extract_context_snippet(resume_text, phone_value, 60)
                 evidence_snippets['contact_number'] = evidence_snippets['phone']
-                logger.info(f"✅ Extracted PHONE: {phone_value}")
+                logger.info(f"Extracted PHONE: {phone_value}")
                 break
         else:
-            logger.warning(f"⚠️ No phone number found in resume text")
+            logger.warning(f"No phone number found in resume text")
         
         # 4. SKILLS - Check if extracted skills actually appear in text
         if 'skills' in resume_extractions:
@@ -218,7 +218,7 @@ class GroundTruthExtractor:
                 extracted_years = int(match.group(1))
                 years_evidence = self.extract_context_snippet(resume_text, match.group(0), 80)
                 ground_truth['total_experience_(months)'] = extracted_years * 12
-                logger.info(f"✅ Extracted EXPERIENCE: {extracted_years} years")
+                logger.info(f"Extracted EXPERIENCE: {extracted_years} years")
                 break
         
         # 7. COMPANIES - Extract company names mentioned in text
@@ -265,7 +265,7 @@ class GroundTruthExtractor:
         if unique_companies:
             ground_truth['current_company_name'] = unique_companies[0]
             ground_truth['companies_worked_at'] = unique_companies
-            logger.info(f"✅ Extracted COMPANIES: {unique_companies}")
+            logger.info(f"Extracted COMPANIES: {unique_companies}")
         
         # Build experience object if we have data
         if extracted_years or unique_companies:
@@ -278,7 +278,7 @@ class GroundTruthExtractor:
             ground_truth['experience'] = experience_data
             if years_evidence:
                 evidence_snippets['experience'] = years_evidence
-            logger.info(f"✅ Built EXPERIENCE ground truth: {experience_data}")
+            logger.info(f"Built EXPERIENCE ground truth: {experience_data}")
         
         # 8. LOCATION - Extract location
         location_patterns = [

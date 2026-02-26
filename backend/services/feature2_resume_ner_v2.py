@@ -36,7 +36,7 @@ class ResumeNERExtractorV2:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.model = AutoModelForTokenClassification.from_pretrained(self.model_name)
             
-            logger.info("✅ Resume-specific NER model loaded successfully")
+            logger.info("Resume-specific NER model loaded successfully")
             logger.info(f"Available labels: {list(self.model.config.id2label.values())}")
             
         except Exception as e:

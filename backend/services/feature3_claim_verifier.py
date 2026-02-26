@@ -305,12 +305,12 @@ class ClaimVerifier:
         for field, extraction in resume_extractions.items():
             # Skip metadata fields
             if field in metadata_fields:
-                logger.debug(f"⏭️ Skipping metadata field: {field}")
+                logger.debug(f"Skipping metadata field: {field}")
                 continue
             
             # Skip empty/null fields
             if is_empty_value(extraction):
-                logger.debug(f"⏭️ Skipping empty field: {field}")
+                logger.debug(f"Skipping empty field: {field}")
                 continue
             
             if not ground_truth_data:
@@ -319,18 +319,18 @@ class ClaimVerifier:
             # Extract verifiable values from nested objects
             extraction_to_verify = extract_verifiable_values(field, extraction)
             if extraction_to_verify is None or is_empty_value(extraction_to_verify):
-                logger.debug(f"⏭️ Skipping field with no verifiable data: {field}")
+                logger.debug(f"Skipping field with no verifiable data: {field}")
                 continue
             
             ground_truth = ground_truth_data.get(field, "")
             
             # Log what we're comparing
-            logger.info(f"\n🔍 Verifying field: {field}")
-            logger.info(f"   📤 Extraction: {extraction_to_verify}")
-            logger.info(f"   📥 Ground Truth: {ground_truth}")
+            logger.info(f"\n Verifying field: {field}")
+            logger.info(f"Extraction: {extraction_to_verify}")
+            logger.info(f"Ground Truth: {ground_truth}")
             
             if not ground_truth or is_empty_value(ground_truth):
-                logger.warning(f"   ⚠️ No ground truth found for field '{field}' - marking as hallucination")
+                logger.warning(f"No ground truth found for field '{field}' - marking as hallucination")
             
             result = self.verify_claim(extraction_to_verify, ground_truth)
             result['field'] = field
@@ -339,7 +339,7 @@ class ClaimVerifier:
             if field in evidence_snippets:
                 result['evidence_snippet'] = evidence_snippets[field]
             
-            logger.info(f"   {'✅' if not result['is_hallucination'] else '❌'} Result: {result['verdict']} (confidence: {result['confidence']:.2f})")
+            logger.info(f"Result: {result['verdict']} (confidence: {result['confidence']:.2f})")
             
             verified_claims.append(result)
             

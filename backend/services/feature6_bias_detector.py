@@ -512,7 +512,7 @@ Rating:"""
                 'error': str(e)[:200]
             }
     
-    def run_experiment(self, 
+    def run_experiment(self,
                        progress_callback=None,
                        hf_token: Optional[str] = None) -> pd.DataFrame:
         """
@@ -833,7 +833,7 @@ Rating:"""
                 report = self.generate_model_report(model_key)
                 model_reports.append(report)
             except Exception as e:
-                print(f"⚠️ Could not generate report for {model_key}: {e}")
+                print(f"Could not generate report for {model_key}: {e}")
         
         # Generate comparison summary
         comparison_summary = self._generate_comparison_summary(model_reports)
@@ -1056,7 +1056,7 @@ def get_bias_engine(
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("🔬 Bias Detection Engine - Quick Test")
+    print("Bias Detection Engine - Quick Test")
     print("=" * 70)
     
     # Initialize engine with minimal config for testing
@@ -1071,11 +1071,11 @@ if __name__ == "__main__":
     engine.generate_test_cases()
     summary = engine.get_test_case_summary()
     
-    print(f"\n📊 Test Case Summary:")
-    print(f"   Total test cases: {summary['total_test_cases']}")
-    print(f"   Models to test: {summary['models_to_test']}")
-    print(f"   Job roles: {summary['job_roles']}")
-    print(f"   Total evaluations: {summary['total_evaluations']}")
+    print(f"\nTest Case Summary:")
+    print(f"Total test cases: {summary['total_test_cases']}")
+    print(f"Models to test: {summary['models_to_test']}")
+    print(f"Job roles: {summary['job_roles']}")
+    print(f"Total evaluations: {summary['total_evaluations']}")
     
     # Show sample resume
     if engine.test_cases:

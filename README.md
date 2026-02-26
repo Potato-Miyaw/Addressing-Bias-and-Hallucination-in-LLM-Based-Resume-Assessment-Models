@@ -43,19 +43,36 @@ This project implements an end-to-end recruitment pipeline that combines natural
 - Statistical analysis of bias patterns
 - Comprehensive bias reporting and metrics
 
-### 7. Interactive Questionnaire System
-- Dynamic questionnaire generation based on job requirements
+### 7. Candidate Questionnaire - Pre-interview Screening
+- Dynamic questionnaire generation based on matched and missing skills from resume analysis
+- Intelligent question creation by analyzing skills against job description requirements
 - Candidate response collection and analysis
 - Sentiment analysis of responses
 - WhatsApp and email notification support
 - Hiring prediction based on questionnaire responses
+- Automated pre-screening to identify qualified candidates before interviews
 
-### 8. Multi-language Support
+### 8. Career Recommendation Engine - Job and Skill Suggestions
+- Personalized job recommendations based on candidate skills and experience
+- Skill gap analysis and development suggestions
+- Career path mapping and progression guidance
+- Learning resource recommendations for skill enhancement
+- Job market insights and trending skills identification
+
+### 9. Evidence Snippet Viewer - Side-by-side Claim Verification Display
+- Interactive side-by-side comparison of resume claims and evidence
+- Visual highlighting of verified and unverified claims
+- Evidence snippet extraction from resume text
+- Confidence score visualization for each claim
+- User-friendly interface for HR review of verification results
+- Detailed breakdown of claim verification methodology
+
+### 10. Multi-language Support
 - Translation service for non-English resumes
 - Language detection and automatic translation
 - Support for diverse candidate pools
 
-### 9. Feedback and Continuous Improvement
+### 11. Feedback and Continuous Improvement
 - HR feedback collection system
 - Model performance tracking
 - Iterative improvement based on real-world usage

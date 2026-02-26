@@ -25,15 +25,15 @@ class WhatsAppService:
             try:
                 from twilio.rest import Client
                 self.client = Client(self.account_sid, self.auth_token)
-                logger.info("✅ WhatsApp service configured (Twilio)")
+                logger.info("WhatsApp service configured (Twilio)")
             except ImportError:
-                logger.warning("⚠️ Twilio package not installed. Run: pip install twilio")
+                logger.warning("Twilio package not installed. Run: pip install twilio")
                 self.is_configured = False
             except Exception as e:
-                logger.error(f"❌ Failed to initialize Twilio client: {e}")
+                logger.error(f"Failed to initialize Twilio client: {e}")
                 self.is_configured = False
         else:
-            logger.warning("⚠️ WhatsApp not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env")
+            logger.warning("WhatsApp not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in .env")
             self.client = None
     
     def send_questionnaire_invitation(
@@ -60,7 +60,7 @@ class WhatsAppService:
             True if sent successfully, False otherwise
         """
         if not self.is_configured:
-            logger.error("❌ Cannot send WhatsApp: Twilio not configured")
+            logger.error("Cannot send WhatsApp: Twilio not configured")
             return False
         
         try:
@@ -77,8 +77,8 @@ Thank you for your interest in the *{job_title}* position at {company_name}.
 Please complete this brief questionnaire:
 {invitation_link}
 
-⏰ Link expires: {expires_at}
-⚡ Takes 10-15 minutes
+Link expires: {expires_at}
+Takes 10-15 minutes
 
 Reply if you have any questions!
 
@@ -92,11 +92,11 @@ Best regards,
                 to=to_number
             )
             
-            logger.info(f"✅ WhatsApp sent to {candidate_phone} (SID: {message.sid})")
+            logger.info(f"WhatsApp sent to {candidate_phone} (SID: {message.sid})")
             return True
             
         except Exception as e:
-            logger.error(f"❌ Failed to send WhatsApp to {candidate_phone}: {e}")
+            logger.error(f"Failed to send WhatsApp to {candidate_phone}: {e}")
             return False
     
     def send_test_message(self, test_phone: str) -> bool:

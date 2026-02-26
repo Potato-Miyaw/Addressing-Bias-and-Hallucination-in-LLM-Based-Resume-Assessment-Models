@@ -440,7 +440,7 @@ class ResumeNERExtractor:
         if isinstance(skills, list):
             for skill in skills:
                 entity_table.append({
-                    "Category": "🛠️ Skill",
+                    "Category": "Skill",
                     "Value": str(skill),
                     "Confidence": "High"
                 })
@@ -451,7 +451,7 @@ class ResumeNERExtractor:
             for edu in education:
                 edu_str = edu.get("degree", str(edu)) if isinstance(edu, dict) else str(edu)
                 entity_table.append({
-                    "Category": "🎓 Education",
+                    "Category": "Education",
                     "Value": edu_str,
                     "Confidence": "High"
                 })
@@ -461,7 +461,7 @@ class ResumeNERExtractor:
         if isinstance(designation, list):
             for job_title in designation:
                 entity_table.append({
-                    "Category": "💼 Job Title",
+                    "Category": "Job Title",
                     "Value": str(job_title),
                     "Confidence": "High"
                 })
@@ -473,7 +473,7 @@ class ResumeNERExtractor:
             if isinstance(certifications, list):
                 for cert in certifications:
                     entity_table.append({
-                        "Category": "📜 Certification",
+                        "Category": "Certification",
                         "Value": str(cert),
                         "Confidence": "Medium"
                     })
@@ -482,7 +482,7 @@ class ResumeNERExtractor:
         company = resume_data.get("current_company_name", "")
         if company and company != "Unknown":
             entity_table.append({
-                "Category": "🏢 Company",
+                "Category": "Company",
                 "Value": str(company),
                 "Confidence": "High"
             })
@@ -491,7 +491,7 @@ class ResumeNERExtractor:
         email = resume_data.get("email_address", "")
         if email and email != "unknown@email.com":
             entity_table.append({
-                "Category": "📧 Email",
+                "Category": "Email",
                 "Value": str(email),
                 "Confidence": "High"
             })
@@ -500,7 +500,7 @@ class ResumeNERExtractor:
         if isinstance(contact_number, list):
             for phone in contact_number:
                 entity_table.append({
-                    "Category": "📱 Phone",
+                    "Category": "Phone",
                     "Value": str(phone),
                     "Confidence": "High"
                 })

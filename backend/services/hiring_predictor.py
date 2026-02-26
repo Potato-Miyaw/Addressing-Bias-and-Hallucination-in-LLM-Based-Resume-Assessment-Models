@@ -52,16 +52,16 @@ class HiringPredictor:
                 self.feature_names = pickle.load(f)
             
             self.model_loaded = True
-            print(f"✅ Model loaded successfully from {model_dir}")
+            print(f"Model loaded successfully from {model_dir}")
             return True
             
         except FileNotFoundError as e:
-            print(f"❌ Model files not found: {e}")
+            print(f"Model files not found: {e}")
             print("Please train the model first using Train_Hiring_Predictor.ipynb")
             self.model_loaded = False
             return False
         except Exception as e:
-            print(f"❌ Error loading model: {e}")
+            print(f"Error loading model: {e}")
             self.model_loaded = False
             return False
     
@@ -119,7 +119,7 @@ class HiringPredictor:
             }
             
         except Exception as e:
-            print(f"❌ Prediction error: {e}")
+            print(f"Prediction error: {e}")
             return self._get_default_prediction()
     
     def _get_recommendation(

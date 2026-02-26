@@ -29,7 +29,7 @@ class EmailService:
         self.is_configured = bool(self.smtp_user and self.smtp_password)
         
         if not self.is_configured:
-            logger.warning("⚠️ Email service not configured. Set SMTP_USER and SMTP_PASSWORD environment variables.")
+            logger.warning("Email service not configured. Set SMTP_USER and SMTP_PASSWORD environment variables.")
     
     def send_questionnaire_invitation(
         self,
@@ -55,13 +55,13 @@ class EmailService:
             True if sent successfully, False otherwise
         """
         if not self.is_configured:
-            logger.error("❌ Cannot send email: SMTP not configured")
+            logger.error("Cannot send email: SMTP not configured")
             return False
         
         try:
             # Create email message
             msg = MIMEMultipart("alternative")
-            msg["Subject"] = f"📋 Questionnaire for {job_title} Position"
+            msg["Subject"] = f"Questionnaire for {job_title} Position"
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = candidate_email
             
@@ -140,7 +140,7 @@ Best regards,
 </head>
 <body>
     <div class="header">
-        <h1>📋 Questionnaire Invitation</h1>
+        <h1>Questionnaire Invitation</h1>
     </div>
     <div class="content">
         <p>Hi <strong>{candidate_name}</strong>,</p>
@@ -150,12 +150,12 @@ Best regards,
         <p>As part of our hiring process, we would like you to complete a brief questionnaire to help us better understand your qualifications and experience.</p>
         
         <div style="text-align: center;">
-            <a href="{invitation_link}" class="button">📝 Complete Questionnaire</a>
+            <a href="{invitation_link}" class="button">Complete Questionnaire</a>
         </div>
         
         <div class="info-box">
-            <p><strong>⏰ Important:</strong> This link will expire on <strong>{expires_at}</strong></p>
-            <p><strong>⚡ Estimated time:</strong> 10-15 minutes</p>
+            <p><strong>Important:</strong> This link will expire on <strong>{expires_at}</strong></p>
+            <p><strong>Estimated time:</strong> 10-15 minutes</p>
         </div>
         
         <p>If the button doesn't work, copy and paste this link into your browser:</p>
@@ -188,17 +188,17 @@ Best regards,
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
             
-            logger.info(f"✅ Questionnaire invitation sent to {candidate_email}")
+            logger.info(f"Questionnaire invitation sent to {candidate_email}")
             return True
             
         except smtplib.SMTPAuthenticationError:
-            logger.error("❌ SMTP Authentication failed. Check your credentials.")
+            logger.error("SMTP Authentication failed. Check your credentials.")
             return False
         except smtplib.SMTPException as e:
-            logger.error(f"❌ SMTP error: {e}")
+            logger.error(f"SMTP error: {e}")
             return False
         except Exception as e:
-            logger.error(f"❌ Failed to send email: {e}")
+            logger.error(f"Failed to send email: {e}")
             return False
     
     def send_test_email(self, test_recipient: str) -> bool:

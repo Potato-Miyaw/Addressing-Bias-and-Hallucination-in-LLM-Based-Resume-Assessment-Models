@@ -68,7 +68,7 @@ async def extract_job_description(request: JDExtractionRequest):
             existing_job = await get_job_by_content_hash(content_hash)
             if existing_job:
                 is_duplicate = True
-                logger.info(f"⚠️ Duplicate job detected: {existing_job['job_id']}")
+                logger.info(f"Duplicate job detected: {existing_job['job_id']}")
         
         # Prepare full job data
         full_job_data = {
@@ -140,7 +140,7 @@ async def upload_job_description(file: UploadFile = File(...), save_to_db: bool 
             existing_job = await get_job_by_content_hash(content_hash)
             if existing_job:
                 is_duplicate = True
-                logger.info(f"⚠️ Duplicate job detected: {existing_job['job_id']}")
+                logger.info(f"Duplicate job detected: {existing_job['job_id']}")
         
         # Prepare full job data
         full_job_data = {

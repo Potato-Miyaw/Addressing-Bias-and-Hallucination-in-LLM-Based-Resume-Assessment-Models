@@ -247,7 +247,7 @@ async def run_bias_experiment(config: ExperimentConfig, background_tasks: Backgr
     This endpoint starts the experiment and returns immediately.
     Use /experiment-status to check progress.
     
-    ⚠️ Requires GPU and HuggingFace model access
+    Requires GPU and HuggingFace model access
     """
     global experiment_state
     
@@ -380,7 +380,7 @@ async def run_quick_test(config: QuickTestConfig):
     Uses single model, single job role, single quality level
     Returns results immediately (may take 1-2 minutes)
     
-    ⚠️ Note: This is synchronous and will block. For full experiments, use /run-experiment
+    Note: This is synchronous and will block. For full experiments, use /run-experiment
     """
     try:
         engine = BiasDetectionEngine(

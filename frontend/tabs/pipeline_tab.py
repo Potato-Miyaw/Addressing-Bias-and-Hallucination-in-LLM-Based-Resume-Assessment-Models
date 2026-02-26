@@ -59,7 +59,7 @@ Resume 2: Bob Jones. 3 years Python experience..."""
                         
                         if response.status_code == 200:
                             st.session_state.pipeline_results = response.json()
-                            st.success("✅ Pipeline completed!")
+                            st.success("Pipeline completed!")
                             st.rerun()
                         else:
                             st.error(f"Error: {response.text}")
